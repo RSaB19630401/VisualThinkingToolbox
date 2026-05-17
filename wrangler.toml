@@ -1,7 +1,0 @@
-name = "visual-thinking-toolbox"
-compatibility_date = "2025-05-01"
-pages_build_output_dir = "dist"
-
-# Build-Kommando wird auch im Cloudflare Dashboard konfiguriert
-[build]
-command = "npm run build"
