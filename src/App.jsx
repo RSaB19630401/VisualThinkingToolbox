@@ -1,6 +1,7 @@
 // App.jsx — Visual Thinking Toolbox: Tool Router
 import React, { useState } from 'react';
 import SketchnoteTool from './SketchnoteTool.jsx';
+import MindMapTool from './MindMapTool.jsx';
 
 const FONT_CSS = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');`;
 
@@ -18,10 +19,11 @@ const TOOLS = [
   {
     id: 'mindmap',
     name: 'Mind-Map',
-    desc: 'Ideen visuell verzweigen und verknüpfen.',
+    desc: 'KI-generierte interaktive Mind-Maps — Bikablo oder Clean.',
     icon: '🧠',
     color: '#7B68AE',
-    ready: false,
+    ready: true,
+    component: MindMapTool,
   },
   {
     id: 'comparison',
