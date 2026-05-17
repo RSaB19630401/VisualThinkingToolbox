@@ -161,9 +161,9 @@ function svgPt(svgEl, clientX, clientY) {
 function renderBikabloNode(node, pal, level, selected, rng) {
   const col = gc(pal, node.color);
   const isRoot = level === 0;
-  const rx = isRoot ? 80 : Math.min(10 + node.label.length * 4.5, 75);
-  const ry = isRoot ? 36 : 22;
-  const fs = isRoot ? 16 : level === 1 ? 13 : 11;
+  const rx = isRoot ? 95 : Math.min(14 + node.label.length * 5.2, 88);
+  const ry = isRoot ? 42 : 27;
+  const fs = isRoot ? 20 : level === 1 ? 16 : 13;
   const sw = selected ? 3 : isRoot ? 2.5 : 1.8;
   const selStroke = selected ? '#E8584F' : col;
 
@@ -209,9 +209,9 @@ function renderBikabloEdge(parent, child, pal, rng) {
 function renderCleanNode(node, pal, level, selected) {
   const col = gc(pal, node.color);
   const isRoot = level === 0;
-  const rx = isRoot ? 80 : Math.min(10 + node.label.length * 4.2, 72);
-  const ry = isRoot ? 32 : 20;
-  const fs = isRoot ? 16 : level === 1 ? 13 : 11;
+  const rx = isRoot ? 95 : Math.min(14 + node.label.length * 5, 85);
+  const ry = isRoot ? 38 : 25;
+  const fs = isRoot ? 20 : level === 1 ? 16 : 13;
   const sw = selected ? 3 : isRoot ? 2 : 1.5;
   const selStroke = selected ? '#E8584F' : col;
   const label = node.label.length > 22 ? node.label.slice(0, 20) + '…' : node.label;
@@ -476,9 +476,9 @@ export default function MindMapTool() {
     // Compute viewBox from node positions
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(({ node: n }) => {
-      const rx = n.label.length * 5 + 30;
+      const rx = n.label.length * 6 + 40;
       minX = Math.min(minX, n.x - rx); maxX = Math.max(maxX, n.x + rx);
-      minY = Math.min(minY, n.y - 40); maxY = Math.max(maxY, n.y + 40);
+      minY = Math.min(minY, n.y - 50); maxY = Math.max(maxY, n.y + 50);
     });
     const pad = 60;
     const vbX = minX - pad, vbY = minY - pad, vbW = maxX - minX + pad * 2, vbH = maxY - minY + pad * 2;
