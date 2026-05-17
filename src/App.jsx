@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import SketchnoteTool from './SketchnoteTool.jsx';
 import MindMapTool from './MindMapTool.jsx';
+import ComparisonTool from './ComparisonTool.jsx';
 
 const FONT_CSS = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');`;
 
@@ -28,10 +29,11 @@ const TOOLS = [
   {
     id: 'comparison',
     name: 'Vorher / Nachher',
-    desc: 'Vergleichsbilder für Transformationen visualisieren.',
+    desc: 'Transformationen sichtbar machen — KI-generierte Vergleichsbilder.',
     icon: '🔄',
     color: '#3B7DD8',
-    ready: false,
+    ready: true,
+    component: ComparisonTool,
   },
   {
     id: 'valuequad',
