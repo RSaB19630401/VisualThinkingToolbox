@@ -1,8 +1,8 @@
 // SketchnoteTool.jsx — The Sketchnote Generator tool (full wizard + renderer)
 import React, { useState, useCallback, useRef } from 'react';
 import { FONT_CSS, mkR, rr, ln, arr } from './primitives.js';
-import { Sc, SCENE_NAMES } from './scenes.js';
-import { Ic, ICON_NAMES } from './icons.js';
+import { Sc, SCENE_NAMES } from './scenes.jsx';
+import { Ic, ICON_NAMES } from './icons.jsx';
 import { PAL, MOOD_VALS, gc } from './palettes.js';
 import { T } from './translations.js';
 import { callAPI } from './api.js';

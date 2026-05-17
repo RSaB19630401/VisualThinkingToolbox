@@ -1,6 +1,6 @@
 // api.js — Claude API communication for sketchnote generation
-import { SCENE_NAMES } from './scenes.js';
-import { ICON_NAMES } from './icons.js';
+import { SCENE_NAMES } from './scenes.jsx';
+import { ICON_NAMES } from './icons.jsx';
 import { MOOD_VALS, ORIENT_VALS } from './palettes.js';
 import { T } from './translations.js';
 import { vd } from './validate.js';

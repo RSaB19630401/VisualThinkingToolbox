@@ -46,14 +46,20 @@ npm run dev        # Lokaler Dev-Server (Port 3000)
 npm run build      # Production Build
 ```
 
-## Deployment (Cloudflare)
+## Deployment (Cloudflare Pages)
 
-```bash
-# Worker + Pages via wrangler
-npx wrangler deploy
-```
+1. **Cloudflare Dashboard** → Workers & Pages → Create → Pages
+2. **Connect to Git** → GitHub-Repo `VisualThinkingToolbox` auswählen
+3. **Build-Einstellungen:**
+   - Framework preset: `None`
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+4. **Environment Variables** (Settings → Environment Variables):
+   - `ANTHROPIC_API_KEY` = dein Claude API Key
+   - `NODE_VERSION` = `18`
+5. **Deploy** — fertig! Jeder Push auf `main` deployt automatisch.
 
-Umgebungsvariable `ANTHROPIC_API_KEY` im Cloudflare Dashboard setzen.
+Die Datei `functions/api/generate.js` wird automatisch als serverless Function unter `/api/generate` bereitgestellt.
 
 ## Neues Tool hinzufügen
 

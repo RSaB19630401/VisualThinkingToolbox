@@ -1,6 +1,6 @@
 // validate.js — Validate and normalize AI-generated sketchnote data
-import { SCENE_NAMES } from './scenes.js';
-import { ICON_NAMES } from './icons.js';
+import { SCENE_NAMES } from './scenes.jsx';
+import { ICON_NAMES } from './icons.jsx';
 
 /**
  * Validate and normalize raw JSON from the Claude API into a safe sketchnote data object.
