@@ -14,7 +14,7 @@ const TOOLS = [
   {
     id: 'sketchnote',
     name: 'Sketchnote Generator',
-    desc: 'KI-generierte Bikablo-Sketchnotes — geführt oder frei.',
+    desc: 'KI-generierte Sketchnotes — geführt oder frei.',
     icon: '✏️',
     color: '#E8584F',
     ready: true,
