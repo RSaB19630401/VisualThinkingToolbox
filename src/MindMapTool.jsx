@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { FONT_CSS, mkR, rr, ln } from './primitives.js';
 import { Ic } from './icons.jsx';
 import { PAL, gc } from './palettes.js';
+import { useSettings, DARK_PAL, saveToGallery, consumePendingGalleryItem } from './settings.js';
 
 // ═══════════════════════════════════════
 // TRANSLATIONS (mind-map specific)
@@ -19,6 +20,7 @@ const MT = {
     fullscreen: '⛶ Vollbild', exitFs: '✕ Schließen', save: '💾 JSON',
     root: 'Hauptthema', branch: 'Neuer Ast', sub: 'Unterpunkt',
     clickToEdit: 'Klick = Bearbeiten · Doppelklick = Zuklappen · Ziehen = Verschieben',
+    load: '📂 Laden', loadDesc: 'Gespeichertes .json importieren.',
     apiLang: 'Deutsch',
   },
   en: {
@@ -331,20 +333,49 @@ export default function MindMapTool() {
   const [fs, setFs] = useState(false);
   const [editLabel, setEditLabel] = useState('');
   const svgRef = useRef(null);
+  const fileRef = useRef(null);
+  const { dark } = useSettings();
   const t = MT[lang] || MT.de;
-  const pal = PAL.neutral;
+  const pal = dark ? DARK_PAL.neutral : PAL.neutral;
+  const bgGrad = dark ? 'linear-gradient(145deg,#12122A,#1A1A2E)' : 'linear-gradient(145deg,#FEFCFB,#F5F0EB)';
+  const textCol = dark ? '#E8E8E8' : '#2D2D2D';
+  const subCol = dark ? '#777' : '#aaa';
 
   // Generate mind map
+  // Auto-load from gallery
+  useEffect(() => {
+    const item = consumePendingGalleryItem();
+    if (item?.tool === 'mindmap' && item.data?.tree) {
+      _idCounter = 100; setTree(item.data.tree); setTopic(item.topic || ''); setPhase('map');
+    }
+  }, []);
+
   const generate = useCallback(async (tp) => {
     setPhase('loading'); setErr(null); setTopic(tp);
     try {
       const newTree = await generateMindMap(tp, lang);
       setTree(newTree); setSel(null); setPhase('map');
+      saveToGallery({ tool: 'mindmap', title: newTree.label, topic: tp, data: { tree: newTree } });
     } catch (e) { console.error(e); setErr(e.message); setPhase('input'); }
   }, [lang]);
 
+  // JSON Import
+  const loadJSON = (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const p = JSON.parse(ev.target.result);
+        if (p.tree) { _idCounter = 100; setTree(p.tree); setTopic(p.topic || ''); setPhase('map'); }
+      } catch { alert('Ungültige JSON-Datei'); }
+    };
+    r.readAsText(f);
+  };
+
   // ─── TREE MUTATION HELPERS ───
-  const updateTree = (fn) => setTree(prev => { if (!prev) return prev; const t2 = deepClone(prev); fn(t2); return t2; });
+  const updateTree = (fn) => setTree(prev => { if (!prev) return prev; undoRef.current = prev; const t2 = deepClone(prev); fn(t2); return t2; });
+  const undoRef = useRef(null);
+  const undo = () => { if (undoRef.current) { setTree(undoRef.current); undoRef.current = null; } };
 
   const toggleCollapse = (id) => updateTree(t2 => {
     const n = findNode(t2, id); if (n) n.collapsed = !n.collapsed;
@@ -429,8 +460,8 @@ export default function MindMapTool() {
   );
   const hdr = (
     <div style={{ textAlign: 'center', padding: '16px 16px 3px' }}>
-      <h1 style={{ fontFamily: 'Caveat,cursive', fontSize: 30, fontWeight: 700, color: '#2D2D2D', margin: 0 }}>🧠 {t.title}</h1>
-      <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 13, color: '#aaa', marginTop: 2 }}>{t.sub}</p>
+      <h1 style={{ fontFamily: 'Caveat,cursive', fontSize: 30, fontWeight: 700, color: textCol, margin: 0 }}>🧠 {t.title}</h1>
+      <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 13, color: subCol, marginTop: 2 }}>{t.sub}</p>
       {langBar}
     </div>
   );
@@ -442,24 +473,31 @@ export default function MindMapTool() {
 
   // ═══ INPUT PHASE ═══
   if (phase === 'input') return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+    <div style={{ minHeight: '100vh', background: bgGrad }}>
       <style>{FONT_CSS}</style>{hdr}{errBox}
       <div style={{ maxWidth: 560, margin: '0 auto', padding: 20 }}>
-        <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 24, fontWeight: 700, color: '#2D2D2D', marginBottom: 5 }}>{t.inputTitle}</h2>
+        <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 24, fontWeight: 700, color: textCol, marginBottom: 5 }}>{t.inputTitle}</h2>
         <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginBottom: 12 }}>{t.inputHint}</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+          {['Projektplanung', 'Lernstrategie', 'Marketingkanäle', 'Karriereplanung', 'Problemanalyse'].map(tpl => (
+            <button key={tpl} onClick={() => setTopic(tpl)} style={{ padding: '4px 12px', borderRadius: 8, border: `1px solid ${dark ? '#444' : '#ddd'}`, background: dark ? '#222240' : '#F8F5FF', fontFamily: 'Patrick Hand,cursive', fontSize: 13, color: '#7B68AE', cursor: 'pointer' }}>{tpl}</button>
+          ))}
+        </div>
         <textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder={t.inputPh}
           style={{ width: '100%', minHeight: 100, padding: 15, borderRadius: 14, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 15, resize: 'vertical', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box', lineHeight: 1.6 }}/>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
+          <button onClick={() => fileRef.current?.click()} style={{ ...bt('#888', false), fontSize: 14 }}>{t.load}</button>
           <button onClick={() => { if (topic.trim()) generate(topic.trim()); }} disabled={!topic.trim()}
             style={{ ...bt(topic.trim() ? '#3B7DD8' : '#ccc', true), fontSize: 18 }}>{t.create}</button>
         </div>
+        <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={loadJSON}/>
       </div>
     </div>
   );
 
   // ═══ LOADING ═══
   if (phase === 'loading') return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+    <div style={{ minHeight: '100vh', background: bgGrad, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
       <style>{FONT_CSS}</style>
       <div style={{ width: 46, height: 46, border: '4px solid #e0e8f0', borderTop: '4px solid #3B7DD8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}/>
       <div style={{ fontFamily: 'Caveat,cursive', fontSize: 20, color: '#3B7DD8', fontWeight: 600 }}>{t.loading}</div>
@@ -522,13 +560,14 @@ export default function MindMapTool() {
     const selectedNode = sel ? findNode(tree, sel) : null;
 
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+      <div style={{ minHeight: '100vh', background: bgGrad }}>
         <style>{FONT_CSS}</style>{hdr}
         <div style={{ padding: 14 }}>
           {/* Toolbar */}
           <div style={{ display: 'flex', gap: 7, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button onClick={() => { setPhase('input'); setTree(null); setSel(null); }} style={bt('#888', false)}>{t.neu}</button>
             <button onClick={() => generate(topic)} style={bt('#3B7DD8', false)}>{t.reroll}</button>
+            <button onClick={undo} disabled={!undoRef.current} style={bt(undoRef.current ? '#E8584F' : '#ccc', false)}>↩ Undo</button>
             <button onClick={() => setStyle(s => s === 'bikablo' ? 'clean' : 'bikablo')}
               style={bt('#7B68AE', false)}>{style === 'bikablo' ? t.clean : t.bikablo}</button>
             <button onClick={relayout} style={bt('#5A8F7B', false)}>↻ Layout</button>

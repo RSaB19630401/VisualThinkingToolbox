@@ -4,6 +4,7 @@ import { FONT_CSS, mkR, rr, ln, arr } from './primitives.js';
 import { Sc, SCENE_NAMES } from './scenes.jsx';
 import { Ic, ICON_NAMES } from './icons.jsx';
 import { PAL, MOOD_VALS, gc } from './palettes.js';
+import { useSettings, DARK_PAL, saveToGallery, consumePendingGalleryItem } from './settings.js';
 import { T } from './translations.js';
 import { callAPI } from './api.js';
 import { dlS, dlP, dlJ } from './downloads.js';
@@ -171,16 +172,34 @@ export default function SketchnoteTool() {
   const [lang, setLang] = useState('de');
   const [fs, setFs] = useState(false);
   const fr = useRef(null);
+  const { dark } = useSettings();
   const t = T[lang] || T.de;
+  const bgGrad = dark ? 'linear-gradient(145deg,#12122A,#1A1A2E)' : 'linear-gradient(145deg,#FEFCFB,#F5F0EB)';
+  const textCol = dark ? '#E8E8E8' : '#2D2D2D';
+  const subCol = dark ? '#777' : '#aaa';
+
+  // Undo
+  const undoRef = useRef(null);
+  const undo = () => { if (undoRef.current) { setSn(undoRef.current); undoRef.current = null; } };
+  const snSet = (fn) => setSn(p => { if (!p) return p; undoRef.current = p; return fn(p); });
 
   // Section editing helpers
-  const updSec = (idx, f2, v) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === idx ? { ...s, [f2]: v } : s) }; }); };
-  const updItem = (si, ii, v) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === si ? { ...s, items: s.items.map((x, j) => j === ii ? v : x) } : s) }; }); };
+  const updSec = (idx, f2, v) => { snSet(p => ({ ...p, sections: p.sections.map((s, i) => i === idx ? { ...s, [f2]: v } : s) })); };
+  const updItem = (si, ii, v) => { snSet(p => ({ ...p, sections: p.sections.map((s, i) => i === si ? { ...s, items: s.items.map((x, j) => j === ii ? v : x) } : s) })); };
   const addItem = (si) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === si ? { ...s, items: [...s.items, '...'] } : s) }; }); };
   const delItem = (si, ii) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === si ? { ...s, items: s.items.filter((_, j) => j !== ii) } : s) }; }); };
   const updTitle = (v) => { setSn(p => p ? { ...p, title: v } : p); };
   const updSubtitle = (v) => { setSn(p => p ? { ...p, subtitle: v } : p); };
   const updCm = (v) => { setSn(p => p ? { ...p, cm: v } : p); };
+
+  // Auto-load from gallery
+  useEffect(() => {
+    const item = consumePendingGalleryItem();
+    if (item?.tool === "sketchnote" && item.data) {
+      const P = dark ? DARK_PAL : PAL;
+      setSn(vd(item.data)); setPal(P[item.data.mood || "neutral"] || P.neutral); setPh("result");
+    }
+  }, []);
 
   const gen = useCallback(async (a, m) => {
     setAns(a); setPh('loading'); setErr(null);
@@ -188,9 +207,11 @@ export default function SketchnoteTool() {
       const d = await callAPI(a, m, 0, lang);
       const mi2 = t.steps[5].o.indexOf(a.mood);
       const mk = m === 'guided' ? (MOOD_VALS[mi2 >= 0 ? mi2 : 0] || 'neutral') : (d.mood && PAL[d.mood] ? d.mood : 'empathisch');
-      setPal(PAL[mk] || PAL.neutral);
+      const P = dark ? DARK_PAL : PAL;
+      setPal(P[mk] || P.neutral);
       setSn(d);
       setPh('result');
+      saveToGallery({ tool: 'sketchnote', title: d.title, topic: a.topic || a.freetext || '', data: d });
     } catch (e) {
       console.error(e);
       setErr(e.message);
@@ -208,8 +229,8 @@ export default function SketchnoteTool() {
   );
   const hdr = (
     <div style={{ textAlign: 'center', padding: '16px 16px 3px' }}>
-      <h1 style={{ fontFamily: 'Caveat,cursive', fontSize: 30, fontWeight: 700, color: '#2D2D2D', margin: 0 }}>✏️ {t.title}</h1>
-      <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 13, color: '#aaa', marginTop: 2 }}>{t.sub}</p>
+      <h1 style={{ fontFamily: 'Caveat,cursive', fontSize: 30, fontWeight: 700, color: textCol, margin: 0 }}>✏️ {t.title}</h1>
+      <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 13, color: subCol, marginTop: 2 }}>{t.sub}</p>
       {langBar}
     </div>
   );
@@ -221,7 +242,7 @@ export default function SketchnoteTool() {
 
   // ─── MODE SELECTION ───
   if (ph === 'mode') return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+    <div style={{ minHeight: '100vh', background: bgGrad }}>
       <style>{FONT_CSS}</style>{hdr}
       <div style={{ maxWidth: 500, margin: '0 auto', padding: 20 }}>
         <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 25, color: '#2D2D2D', textAlign: 'center', marginBottom: 18 }}>{t.howStart}</h2>
@@ -238,7 +259,7 @@ export default function SketchnoteTool() {
               const p = JSON.parse(ev.target.result);
               if (!p || !p.answers) return;
               setAns(p.answers); setMode(p.mode || 'guided'); setRs(p.rs || 'structured');
-              if (p.data) { setSn(vd(p.data)); setPal(PAL[p.data.mood || 'neutral'] || PAL.neutral); setPh('result'); }
+              if (p.data) { const P = dark ? DARK_PAL : PAL; setSn(vd(p.data)); setPal(P[p.data.mood || 'neutral'] || P.neutral); setPh('result'); }
               else setPh(p.mode || 'guided');
             } catch (e2) { alert('!'); }
           };
@@ -253,7 +274,7 @@ export default function SketchnoteTool() {
     const steps = t.steps; const c = steps[step]; const isText = !c.o;
     const ok = c.id === 'extras' || (ans[c.id] && ans[c.id].trim());
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+      <div style={{ minHeight: '100vh', background: bgGrad }}>
         <style>{FONT_CSS}</style>{hdr}{errBox}
         <div style={{ maxWidth: 540, margin: '0 auto', padding: 20 }}>
           <div style={{ display: 'flex', gap: 5, marginBottom: 22 }}>{steps.map((_, i) => (<div key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: i <= step ? '#E8584F' : '#e0e0e0' }}/>))}</div>
@@ -284,11 +305,16 @@ export default function SketchnoteTool() {
 
   // ─── FREE MODE ───
   if (ph === 'free') return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+    <div style={{ minHeight: '100vh', background: bgGrad }}>
       <style>{FONT_CSS}</style>{hdr}{errBox}
       <div style={{ maxWidth: 560, margin: '0 auto', padding: 20 }}>
         <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 24, fontWeight: 700, color: '#2D2D2D', marginBottom: 5 }}>{t.freeTitle}</h2>
         <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginBottom: 12 }}>{t.freeHint}</p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {["Change Management", "Teambuilding Workshop", "Selbstständigkeit Coaching", "Agile Transformation", "Work-Life-Balance"].map(tpl => (
+            <button key={tpl} onClick={() => setFt(tpl)} style={{ padding: "4px 12px", borderRadius: 8, border: `1px solid ${dark ? "#444" : "#ddd"}`, background: dark ? "#222240" : "#FFF5F0", fontFamily: "Patrick Hand,cursive", fontSize: 13, color: "#E8584F", cursor: "pointer" }}>{tpl}</button>
+          ))}
+        </div>
         <textarea value={ft} onChange={e => setFt(e.target.value)} placeholder={t.freePh} style={{ width: '100%', minHeight: 160, padding: 15, borderRadius: 14, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 15, resize: 'vertical', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box', lineHeight: 1.6 }}/>
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           {[['structured', t.structured], ['free', t.freeSketch]].map(([k, la]) => (
@@ -305,7 +331,7 @@ export default function SketchnoteTool() {
 
   // ─── LOADING ───
   if (ph === 'loading') return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+    <div style={{ minHeight: '100vh', background: bgGrad, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
       <style>{FONT_CSS}</style>
       <div style={{ width: 46, height: 46, border: '4px solid #f0e0e0', borderTop: '4px solid #E8584F', borderRadius: '50%', animation: 'spin 1s linear infinite' }}/>
       <div style={{ fontFamily: 'Caveat,cursive', fontSize: 20, color: '#E8584F', fontWeight: 600 }}>{t.loading}</div>
@@ -331,12 +357,13 @@ export default function SketchnoteTool() {
     );
 
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
+      <div style={{ minHeight: '100vh', background: bgGrad }}>
         <style>{FONT_CSS}</style>{hdr}
         <div style={{ padding: 14 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button onClick={() => { setPh('mode'); setMode(null); setAns({}); setSn(null); setErr(null); setEd(false); }} style={bt('#888', false)}>{t.neu}</button>
             <button onClick={() => gen(ans, mode)} style={bt('#E8584F', false)}>{t.reroll}</button>
+            <button onClick={undo} disabled={!undoRef.current} style={bt(undoRef.current ? '#E8584F' : '#ccc', false)}>↩ Undo</button>
             <button onClick={() => setEd(e2 => !e2)} style={bt(ed ? '#E8584F' : '#7B68AE', ed)}>{ed ? t.done : t.edit}</button>
             <button onClick={() => setRs(r => r === 'free' ? 'structured' : 'free')} style={bt('#3B7DD8', false)}>{rs === 'free' ? t.boxes : t.freeL}</button>
             <button onClick={() => setFs(true)} style={bt('#555', false)}>{t.fullscreen}</button>
