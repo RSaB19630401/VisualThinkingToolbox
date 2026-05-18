@@ -23,7 +23,7 @@ const TOOLS = [
   {
     id: 'mindmap',
     name: 'Mind-Map',
-    desc: 'KI-generierte interaktive Mind-Maps — Bikablo oder Clean.',
+    desc: 'KI-generierte interaktive Mind-Maps — Sketch oder Clean.',
     icon: '🧠',
     color: '#7B68AE',
     ready: true,

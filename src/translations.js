@@ -2,7 +2,7 @@
 
 export const T = {
   de: {
-    title: 'Sketchnote Visualizer', sub: 'Strukturiert oder Frei · Bikablo-Stil',
+    title: 'Sketchnote Visualizer', sub: 'Strukturiert oder Frei · Skizzen-Stil',
     howStart: 'Wie möchtest du starten?',
     guided: '📋 Geführt', guidedDesc: 'Schritt für Schritt durch Fragen.',
     free: '✍️ Freier Modus', freeDesc: 'Alles frei beschreiben — KI leitet alles ab.',
@@ -31,7 +31,7 @@ export const T = {
   },
 
   en: {
-    title: 'Sketchnote Visualizer', sub: 'Structured or Free · Bikablo Style',
+    title: 'Sketchnote Visualizer', sub: 'Structured or Free · Sketch Style',
     howStart: 'How do you want to start?',
     guided: '📋 Guided', guidedDesc: 'Step by step through questions.',
     free: '✍️ Free Mode', freeDesc: 'Describe everything freely — AI figures it out.',
@@ -60,7 +60,7 @@ export const T = {
   },
 
   ru: {
-    title: 'Скетчноут Визуализатор', sub: 'Структурированный или свободный · стиль Бикабло',
+    title: 'Скетчноут Визуализатор', sub: 'Структурированный или свободный · стиль Скетч',
     howStart: 'Как вы хотите начать?',
     guided: '📋 Пошагово', guidedDesc: 'Шаг за шагом через вопросы.',
     free: '✍️ Свободный', freeDesc: 'Опишите всё свободно — ИИ определит всё сам.',
