@@ -83,3 +83,20 @@ export function resolvePalette(baseColor, moodKey) {
   if (baseColor) return derivePalette(baseColor, moodKey);
   return PAL[moodKey] || PAL.neutral;
 }
+
+// --- Palette Cards (mood-oriented color suggestions) ---
+
+export const PALETTE_CARDS = [
+  { id: 'warm',   de: 'Warm & Mutig',        en: 'Warm & Bold',         ru: 'Тёплый & Смелый',     p: '#E8584F', s: '#F5A623', a: '#4CAF50', mood: 'optimistisch' },
+  { id: 'calm',   de: 'Ruhig & Klar',        en: 'Calm & Clear',        ru: 'Спокойный & Ясный',   p: '#3B7DD8', s: '#6B7B8D', a: '#E8584F', mood: 'neutral' },
+  { id: 'nature', de: 'Natürlich & Wachstum', en: 'Natural & Growth',    ru: 'Природный & Рост',    p: '#4A9B6F', s: '#8BC34A', a: '#FF9800', mood: 'optimistisch' },
+  { id: 'creative', de: 'Kreativ & Inspiriert', en: 'Creative & Inspired', ru: 'Креативный & Вдохновлённый', p: '#7B68AE', s: '#5A8F7B', a: '#D4A853', mood: 'nachdenklich' },
+  { id: 'energy', de: 'Energisch & Dynamisch', en: 'Energetic & Dynamic', ru: 'Энергичный & Динамичный', p: '#FF6B35', s: '#FFD23F', a: '#E8584F', mood: 'energisch' },
+  { id: 'friendly', de: 'Freundlich & Einladend', en: 'Friendly & Inviting', ru: 'Дружелюбный & Уютный', p: '#E07BAB', s: '#7DAFCB', a: '#95C77E', mood: 'empathisch' },
+  { id: 'pro',    de: 'Professionell & Vertrauen', en: 'Professional & Trust', ru: 'Профессиональный & Доверие', p: '#1B5E7B', s: '#34839B', a: '#E8A838', mood: 'neutral' },
+  { id: 'earth',  de: 'Erdig & Bodenständig', en: 'Earthy & Grounded',   ru: 'Земной & Основательный', p: '#8B6544', s: '#A89070', a: '#6B8E5A', mood: 'nachdenklich' },
+];
+
+export function paletteFromCard(card) {
+  return { p: card.p, s: card.s, a: card.a, t: '#2D2D2D', bg: '#FEFCFB', sb: '#F8F6F3' };
+}

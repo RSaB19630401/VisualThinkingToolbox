@@ -1,91 +1,85 @@
-// api.js — Anthropic API call via Cloudflare proxy, with Bildstark-specific prompt
+// api.js — API calls for all tools: Sketchnote, Mind Map, Comparison, Values Square
 import { SCENE_NAMES } from './scenes.jsx';
 import { ICON_NAMES } from './icons.jsx';
 import { MOOD_VALS } from './palettes.js';
 import { T } from './translations.js';
 import { vd } from './validate.js';
 
+async function apiCall(sys, usr, attempt = 0) {
+  const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
+  const res = await fetch(apiUrl, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: sys, messages: [{ role: 'user', content: usr }] }),
+  });
+  if (res.status === 429 && attempt < 2) {
+    await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
+    return apiCall(sys, usr, attempt + 1);
+  }
+  if (!res.ok) throw new Error(res.status === 429 ? 'Rate-Limit. Bitte 30s warten.' : `API-Fehler ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = (data.content || []).map(b => b.text || '').join('');
+  if (!text.trim()) throw new Error('Leer');
+  const cl = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  try { return JSON.parse(cl); }
+  catch (e) { const mt = cl.match(/\{[\s\S]*\}/); if (mt) return JSON.parse(mt[0]); throw new Error('JSON-Fehler'); }
+}
+
+// ── SKETCHNOTE ──
 export async function callAPI(answers, mode, attempt = 0, lang = 'de', style = 'structured') {
-  const scL = SCENE_NAMES.join(',');
-  const syL = ICON_NAMES.join(',');
+  const scL = SCENE_NAMES.join(','), syL = ICON_NAMES.join(',');
   const tLang = T[lang]?.apiLang || 'Deutsch';
   const tl = T[lang] || T.de;
-
-  const sceneGuide = 'mountainClimb=Herausforderung,targetHit=Ziel,bridge=Verbindung,seedToTree=Wachstum,lighthouse=Orientierung,teamCircle=Teamwork,ladder=Aufstieg,compass=Richtung,figureThinking=Reflexion,figureCelebrate=Erfolg,doorOpen=Neuanfang,puzzleFit=Zusammenhang,figureHandshake=Vereinbarung/Kennenlernen,figureConversation=Dialog/Austausch,figureListening=Zuhören/Empathie,figureHug=Nähe/Trost,figureFear=Angst/Hemmung,figureDoubt=Zweifel/Entscheidung,figureBalance=Balance/Gleichgewicht,figureCourage=Mut/Durchbruch,windingRoad=Lebensweg/Prozess,mirrorReflect=Selbstreflexion,scaleBalance=Abwägen,networkNodes=Netzwerk/Vernetzung,treasure=Schatz/Potenzial,wallBreak=Durchbruch/Überwindung';
-
-  const isBildstark = style === 'bildstark';
-
-  const base = isBildstark
-    ? `Sketchnote-Designer für BILDSTARKE, KINDGERECHTE Visualisierung. NUR reines JSON antworten. Keine Backticks.
-Szenen:${scL}
-Szenen-Guide:${sceneGuide}
-Symbole:${syL}
-JSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..max40Z","layout":{"columns":4},"sections":[{"number":1,"title":"..","scene":"name","symbol":"name","color":"primary","items":["max12Z","max12Z"]}],"footer":{"title":"SO GEHT'S","items":["Schritt1","Schritt2","Schritt3","Schritt4"]}}
-WICHTIG FÜR BILDSTARK-STIL:
-- Zielgruppe: Kinder ab 10 Jahre, einfachste Sprache!
-- JEDER item max 12 Zeichen (1-3 Wörter)! z.B. "Mut haben", "Ziel setzen", "Team bilden"
-- JEDE Sektion MUSS eine scene haben! Keine ohne scene!
-- Titel max 16 Zeichen, sehr kurz und klar
-- 6-9 Sektionen, je 2-3 Stichpunkte (ultrakurz!)
-- centralMessage: Einfacher Satz, den ein Kind versteht
-- footer.items: 3-4 Prozessschritte als Verben (z.B. "Verstehen","Vereinfachen","Zeichnen","Teilen")
-- Nutze bildstarke Szenen! Jede Sektion ein anderes Bild!
-- Denke in visuellen Metaphern, nicht in Text
-Alle Texte in ${tLang}!`
-    : `Sketchnote-Designer, Bikablo-Stil. NUR reines JSON antworten. Keine Backticks, kein Text.
-Szenen:${scL}
-Szenen-Guide:${sceneGuide}
-Symbole:${syL}
-JSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..","layout":{"columns":3},"sections":[{"number":1,"title":"..","scene":"name|null","symbol":"name","color":"primary","items":["..max28Z"]}],"footer":{"title":"FAZIT","items":[".."]}}
-Erste 4-5 Sektionen=Hauptstory,Rest=Werkzeugkasten. 7-9 Sektionen,2-3 kurze Stichpunkte(max 28Z!),Titel max 22Z,mind.5 mit scene,Nutze vielfältige Szenen!
-WICHTIG: Alle Texte in ${tLang} schreiben!`;
-
+  const sceneGuide = 'mountainClimb=Herausforderung,targetHit=Ziel,bridge=Verbindung,seedToTree=Wachstum,lighthouse=Orientierung,teamCircle=Teamwork,ladder=Aufstieg,compass=Richtung,figureThinking=Reflexion,figureCelebrate=Erfolg,doorOpen=Neuanfang,puzzleFit=Zusammenhang,figureHandshake=Vereinbarung,figureConversation=Dialog,figureListening=Zuhören,figureHug=Nähe,figureFear=Angst,figureDoubt=Zweifel,figureBalance=Balance,figureCourage=Mut,windingRoad=Lebensweg,mirrorReflect=Selbstreflexion,scaleBalance=Abwägen,networkNodes=Netzwerk,treasure=Potenzial,wallBreak=Durchbruch';
+  const isBs = style === 'bildstark';
+  const base = isBs
+    ? `Sketchnote-Designer BILDSTARK. NUR JSON. Szenen:${scL} Symbole:${syL}\nJSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..max40Z","layout":{"columns":4},"sections":[{"number":1,"title":"..","scene":"name","symbol":"name","color":"primary","items":["max12Z"]}],"footer":{"title":"SO GEHT'S","items":["Schritt1","Schritt2"]}}\nJEDE section MUSS scene haben! Items max 12Z, Titel max 16Z, 6-9 Sektionen, einfachste Sprache für Kinder. Alle Texte ${tLang}!`
+    : `Sketchnote-Designer Bikablo. NUR JSON. Szenen:${scL} Guide:${sceneGuide} Symbole:${syL}\nJSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..","layout":{"columns":3},"sections":[{"number":1,"title":"..","scene":"name|null","symbol":"name","color":"primary","items":["..max28Z"]}],"footer":{"title":"FAZIT","items":[".."]}}\n7-9 Sektionen,2-3 Punkte(max 28Z!),mind.5 mit scene. Alle Texte ${tLang}!`;
   let sys, usr;
   if (mode === 'guided') {
     const mi = tl.steps[5].o.indexOf(answers.mood);
     const mk = MOOD_VALS[mi >= 0 ? mi : 0] || 'neutral';
     const oi = tl.steps[6].o.indexOf(answers.orientation);
-    const ORIENT_VALS2 = ['landscape', 'portrait', 'auto'];
-    const or2 = ORIENT_VALS2[oi >= 0 ? oi : 0] || 'landscape';
-    sys = base + ` Stimmung:${mk} Struktur:${answers.structure} Kontext:${answers.context} Orient:${or2 === 'auto' ? 'wähle' : or2}`;
-    usr = `THEMA:${answers.topic} ZIEL:${answers.goal || ''} EXTRA:${answers.extras || ''} JSON:`;
+    const or2 = ['landscape','portrait','auto'][oi >= 0 ? oi : 0] || 'landscape';
+    sys = base + ` Stimmung:${mk} Struktur:${answers.structure} Kontext:${answers.context} Orient:${or2==='auto'?'wähle':or2}`;
+    usr = `THEMA:${answers.topic} ZIEL:${answers.goal||''} EXTRA:${answers.extras||''} JSON:`;
   } else {
-    sys = base + (isBildstark ? ' Freie Beschreibung. Leite alles ab. Halte es EXTREM einfach und bildhaft!' : ' Freie Beschreibung.Leite alles ab.');
+    sys = base + ' Freie Beschreibung. Leite alles ab.';
     usr = `BESCHREIBUNG:${answers.freetext} JSON:`;
   }
+  const raw = await apiCall(sys, usr, attempt);
+  return vd(raw);
+}
 
-  const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      system: sys,
-      messages: [{ role: 'user', content: usr }],
-    }),
-  });
+// ── MIND MAP ──
+export async function callMindMapAPI(topic, lang = 'de') {
+  const tLang = { de: 'Deutsch', en: 'English', ru: 'Russisch' }[lang] || 'Deutsch';
+  const sys = `Mind-Map-Designer. NUR reines JSON. Erstelle eine Mind Map zum Thema.
+JSON: {"title":"Zentrales Thema","branches":[{"label":"Ast-Name","color":"primary|secondary|accent","children":["Unter1","Unter2","Unter3"]}]}
+Regeln: 4-7 Hauptäste, je 2-4 Unteräste. Kurze Begriffe (max 20 Zeichen). Alle Texte in ${tLang}!`;
+  const usr = `THEMA: ${topic} JSON:`;
+  return await apiCall(sys, usr);
+}
 
-  if (res.status === 429 && attempt < 2) {
-    await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
-    return callAPI(answers, mode, attempt + 1, lang, style);
-  }
-  if (!res.ok) throw new Error(res.status === 429
-    ? 'Rate-Limit erreicht. Bitte 30s warten und erneut versuchen.'
-    : `API-Fehler ${res.status}`);
+// ── COMPARISON / VERGLEICHSBILD ──
+export async function callComparisonAPI(topic, layout, lang = 'de') {
+  const tLang = { de: 'Deutsch', en: 'English', ru: 'Russisch' }[lang] || 'Deutsch';
+  const layoutHint = layout === 'venn' ? 'Venn-Diagramm mit Überschneidungen' : `${layout === '3col' ? '3' : layout === '4col' ? '4' : '2'} Spalten nebeneinander`;
+  const sys = `Vergleichsbild-Designer. NUR reines JSON. Layout: ${layoutHint}.
+JSON: {"title":"Vergleichstitel","subtitle":"..","columns":[{"label":"Spalte A","icon":"star","color":"primary","items":["Punkt1","Punkt2","Punkt3"]},{"label":"Spalte B","icon":"heart","color":"secondary","items":["Punkt1","Punkt2"]}]${layout === 'venn' ? ',"shared":["Gemeinsamkeit1","Gemeinsamkeit2"]' : ''},"conclusion":"Fazit-Satz"}
+Icons: idea,heart,star,checkmark,target,flag,rocket,clock,growth,person,shield,key,brain,eye,thumbsUp
+Regeln: Items max 25 Zeichen, Labels max 18 Zeichen. Alle Texte in ${tLang}!`;
+  const usr = `THEMA: ${topic} JSON:`;
+  return await apiCall(sys, usr);
+}
 
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  const text = (data.content || []).map(b => b.text || '').join('');
-  if (!text.trim()) throw new Error('Leer');
-
-  const cl = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  let p;
-  try { p = JSON.parse(cl); }
-  catch (e) {
-    const mt = cl.match(/\{[\s\S]*\}/);
-    if (mt) p = JSON.parse(mt[0]);
-    else throw new Error('JSON-Fehler');
-  }
-  return vd(p);
+// ── VALUES SQUARE / WERTEQUADRAT ──
+export async function callValuesSquareAPI(topic, variant, lang = 'de') {
+  const tLang = { de: 'Deutsch', en: 'English', ru: 'Russisch' }[lang] || 'Deutsch';
+  const varHint = variant === 'dialectic' ? 'Mit Dialektik-Pfeilen zwischen Über- und Untertreibung' : variant === 'simple' ? 'Einfach: 4 Felder + zentrale Frage' : 'Klassisch 2x2 mit positiven Werten oben, Übertreibungen unten';
+  const sys = `Wertequadrat-Designer nach Friedemann Schulz von Thun. NUR reines JSON. Variante: ${varHint}.
+JSON: {"title":"Wertequadrat: Thema","centralQuestion":"Leitfrage?","quadrants":[{"position":"topLeft","label":"Positiver Wert A","description":"Kurze Erklärung","color":"primary"},{"position":"topRight","label":"Positiver Wert B","description":"Kurze Erklärung","color":"secondary"},{"position":"bottomLeft","label":"Übertreibung A","description":"Kurze Erklärung","color":"accent"},{"position":"bottomRight","label":"Übertreibung B","description":"Kurze Erklärung","color":"accent"}],"tensions":[{"from":"topLeft","to":"topRight","label":"Ergänzung"},{"from":"topLeft","to":"bottomLeft","label":"Übertreibung"},{"from":"topRight","to":"bottomRight","label":"Übertreibung"},{"from":"bottomLeft","to":"bottomRight","label":"Entwertung"}]}
+Regeln: Labels max 20Z, Descriptions max 40Z. Alle Texte in ${tLang}!`;
+  const usr = `THEMA: ${topic} JSON:`;
+  return await apiCall(sys, usr);
 }

@@ -522,22 +522,22 @@ function ColorPicker({ value, onChange, label, onClear }) {
   );
 }
 
-export default function SketchnoteTool() {
+export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseColor, sharedMoodKey, onHome }) {
   const [ph, setPh] = useState('mode');
   const [mode, setMode] = useState(null);
   const [ans, setAns] = useState({});
   const [sn, setSn] = useState(null);
-  const [pal, setPal] = useState(PAL.neutral);
+  const [pal, setPal] = useState(sharedPal || PAL.neutral);
   const [err, setErr] = useState(null);
   const [rs, setRs] = useState('structured');
   const [step, setStep] = useState(0);
   const [ft, setFt] = useState('');
   const [frs, setFrs] = useState('free');
   const [ed, setEd] = useState(false);
-  const [lang, setLang] = useState('de');
+  const [lang, setLang] = useState(propLang || 'de');
   const [fs, setFs] = useState(false);
-  const [baseColor, setBaseColor] = useState(null);
-  const [moodKey, setMoodKey] = useState('neutral');
+  const [baseColor, setBaseColor] = useState(sharedBaseColor || null);
+  const [moodKey, setMoodKey] = useState(sharedMoodKey || 'neutral');
   const fr = useRef(null);
   const t = T[lang] || T.de;
 
@@ -600,6 +600,7 @@ export default function SketchnoteTool() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
       <style>{FC}</style>{hdr}
       <div style={{ maxWidth: 500, margin: '0 auto', padding: 20 }}>
+        {onHome && <button onClick={onHome} style={{ ...bt('#888', false), marginBottom: 10 }}>← Toolbox</button>}
         <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 25, color: '#2D2D2D', textAlign: 'center', marginBottom: 18 }}>{t.howStart}</h2>
 
         {/* Base color picker */}
