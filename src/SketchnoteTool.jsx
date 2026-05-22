@@ -314,149 +314,183 @@ function ProCardSVG({ data, pal }) {
   </svg>);
 }
 
+
 /* ═══════════════════════════════════════════
-   BILDSTARK SVG (4th style — organic flowing sketchnote)
-   NO cards, NO grid. Flowing horizontal layout with:
-   - Brush-stroke title backgrounds
-   - HUGE illustrations (main visual element)
-   - Big bold arrows connecting sections
-   - Minimal keyword labels
-   - Bottom toolbox bar
+   BILDSTARK SVG — Organic flowing sketchnote
+   Like "Erstkontakt" / "Guter Gesprächseinstieg" references:
+   HUGE illustrations, bold arrows, brush-stroke titles,
+   NO cards, NO grid, maximum visual impact
    ═══════════════════════════════════════════ */
 
-function brushStroke(x, y, w, h, rng, col, op = 0.2) {
-  const j = () => (rng() - 0.5) * 4;
-  const d = `M${x+4+j()},${y+h*0.3+j()} Q${x+w*0.15+j()},${y-2+j()} ${x+w*0.35+j()},${y+1+j()} Q${x+w*0.65+j()},${y-1+j()} ${x+w-4+j()},${y+h*0.25+j()} Q${x+w+2+j()},${y+h*0.6+j()} ${x+w-6+j()},${y+h-1+j()} Q${x+w*0.6+j()},${y+h+2+j()} ${x+w*0.3+j()},${y+h+j()} Q${x+2+j()},${y+h-1+j()} ${x+4+j()},${y+h*0.3+j()}Z`;
-  return <path d={d} fill={col} opacity={op} />;
+function brushBg(x, y, w, h, rng, col) {
+  const j = () => (rng() - 0.5) * 5;
+  return <path d={`M${x+j()},${y+h*0.4+j()} Q${x+w*0.2+j()},${y-3+j()} ${x+w*0.5+j()},${y+j()} Q${x+w*0.8+j()},${y-2+j()} ${x+w+j()},${y+h*0.35+j()} Q${x+w+3+j()},${y+h*0.7+j()} ${x+w-2+j()},${y+h+j()} Q${x+w*0.5+j()},${y+h+3+j()} ${x+2+j()},${y+h+j()} Q${x-2+j()},${y+h*0.6+j()} ${x+j()},${y+h*0.4+j()}Z`}
+    fill={col} opacity="0.28" />;
 }
 
-function flowArrow(x1, y1, x2, y2, rng2, col) {
-  const mx = (x1+x2)/2, my = (y1+y2)/2 + (rng2()-0.5)*4, h = 12;
-  const a = Math.atan2(y2-y1, x2-x1);
+function bigArrow(x1, y1, x2, y2, rng, col) {
+  const mx = (x1+x2)/2, my = (y1+y2)/2 + (rng()-0.5)*6;
   return (<g>
-    <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke={col} strokeWidth="3.5" strokeLinecap="round" />
-    <path d={`M${x2},${y2} L${x2+Math.cos(a+2.6)*h},${y2+Math.sin(a+2.6)*h}`} stroke={col} strokeWidth="3" strokeLinecap="round" />
-    <path d={`M${x2},${y2} L${x2+Math.cos(a-2.6)*h},${y2+Math.sin(a-2.6)*h}`} stroke={col} strokeWidth="3" strokeLinecap="round" />
+    <path d={`M${x1},${y1} Q${mx},${my} ${x2-4},${y2}`} fill="none" stroke={col} strokeWidth="4.5" strokeLinecap="round" />
+    <path d={`M${x2-14},${y2-8} L${x2},${y2} L${x2-14},${y2+8}`} fill="none" stroke={col} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
   </g>);
 }
 
 function BildstarkSVG({ data, pal }) {
   const la = data.orientation !== 'portrait';
-  const W = la ? 1200 : 800, H = la ? 700 : 1100;
-  const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
-
+  const W = la ? 1200 : 800, H = la ? 740 : 1100;
+  const seed = (data.title||'').length*7+42, rng = mkR(seed);
   const allSecs = data.sections.slice(0, 9);
-  const mainMax = la ? 5 : 4;
+  const mainMax = la ? 5 : 3;
   const mainCount = Math.min(allSecs.length, mainMax);
   const mainSecs = allSecs.slice(0, mainCount);
   const toolSecs = allSecs.slice(mainCount);
   const hasTools = toolSecs.length > 0 || (data.footer?.items?.length > 0);
+  const toolH = hasTools ? 135 : 0;
+  const bannerH = 60;
+  const subGap = data.subtitle ? 28 : 8;
+  const flowY = bannerH + subGap + 10;
+  const flowBottom = H - toolH - 16;
+  const flowH = flowBottom - flowY;
+  const colW = (W - 60) / mainCount;
 
-  const toolH = hasTools ? 130 : 0;
-  const bannerY = 8, bannerH = 56;
-  const subY = bannerH + 20;
-  const flowStartY = data.subtitle ? subY + 24 : bannerH + 22;
-  const flowEndY = H - toolH - 20;
-  const colW = (W - 40) / mainCount;
+  // Title brush-stroke Y and icon area
+  const titleZoneH = 32;
+  const sceneZoneY = flowY + titleZoneH + 10;
+  const iconSize = la ? 130 : 100;
+  const sceneVisH = iconSize + 30; // icon + padding
+  const labelZoneY = sceneZoneY + sceneVisH;
 
-  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width:'100%', height:'100%', background: pal.bg, borderRadius:12 }}>
+  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%',background:pal.bg,borderRadius:12}}>
     <defs><style>{FC}</style></defs>
     <rect width={W} height={H} fill={pal.bg} rx="10" />
-    <path d={rr(6,6,W-12,H-12,16,rng,4)} fill="none" stroke={pal.p} strokeWidth="1.8" opacity="0.08" />
+    <path d={rr(6,6,W-12,H-12,16,rng,4)} fill="none" stroke={pal.p} strokeWidth="1.5" opacity="0.07" />
 
-    {/* ── HAND-DRAWN BANNER ── */}
+    {/* ── BANNER: hand-drawn box with accent underlines ── */}
     {(() => {
-      const bw = Math.min(W*0.6,580), bx = W/2-bw/2, bRng = mkR(seed+13);
+      const bw = Math.min(W*0.65,620), bx = W/2-bw/2, by = 6, bRng = mkR(seed+13);
       return (<g>
-        <path d={`M${bx+12},${bannerY+4} L${bx+bw-12},${bannerY+4} Q${bx+bw},${bannerY+4} ${bx+bw},${bannerY+bannerH/2} Q${bx+bw},${bannerY+bannerH-4} ${bx+bw-12},${bannerY+bannerH-4} L${bx+12},${bannerY+bannerH-4} Q${bx},${bannerY+bannerH-4} ${bx},${bannerY+bannerH/2} Q${bx},${bannerY+4} ${bx+12},${bannerY+4}Z`}
-          fill="#fff" stroke={pal.t} strokeWidth="2.2" />
-        <path d={`M${bx+20},${bannerY+bannerH-8} Q${bx+bw/2},${bannerY+bannerH-4+(bRng()-0.5)*3} ${bx+bw-20},${bannerY+bannerH-8}`}
-          fill="none" stroke={pal.p} strokeWidth="3" strokeLinecap="round" />
-        <path d={`M${bx+40},${bannerY+bannerH-3} Q${bx+bw/2},${bannerY+bannerH+(bRng()-0.5)*3} ${bx+bw-40},${bannerY+bannerH-3}`}
-          fill="none" stroke={pal.p} strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-        {[[-18,16],[-14,28],[bw+10,16],[bw+6,28]].map(([dx,dy],k) => (
-          <line key={k} x1={bx+dx} y1={bannerY+dy-4} x2={bx+dx+10} y2={bannerY+dy+2} stroke={pal.p} strokeWidth="2.5" opacity="0.4" strokeLinecap="round" />
+        <path d={rr(bx, by, bw, bannerH-8, 10, bRng, 4)} fill="#fff" stroke={pal.t} strokeWidth="2.5" />
+        {/* Bold accent underlines */}
+        <path d={`M${bx+16},${by+bannerH-10} Q${bx+bw/2},${by+bannerH-6+(bRng()-0.5)*4} ${bx+bw-16},${by+bannerH-10}`}
+          fill="none" stroke={pal.p} strokeWidth="4" strokeLinecap="round" />
+        <path d={`M${bx+50},${by+bannerH-4} Q${bx+bw/2},${by+bannerH+(bRng()-0.5)*3} ${bx+bw-50},${by+bannerH-4}`}
+          fill="none" stroke={pal.p} strokeWidth="3" strokeLinecap="round" opacity="0.45" />
+        {/* Deco dashes */}
+        {[[-16,14],[-12,26],[bw+8,14],[bw+4,26]].map(([dx,dy],k) => (
+          <line key={k} x1={bx+dx} y1={by+dy-3} x2={bx+dx+12} y2={by+dy+3} stroke={pal.p} strokeWidth="3" opacity="0.4" strokeLinecap="round" />
         ))}
-        <text x={W/2} y={bannerY+38} textAnchor="middle" fontFamily="Caveat" fontSize="32" fontWeight="700" fill={pal.t} letterSpacing="2">{data.title.toUpperCase()}</text>
+        <text x={W/2} y={by+38} textAnchor="middle" fontFamily="Caveat" fontSize="34" fontWeight="700" fill={pal.t} letterSpacing="2">{data.title.toUpperCase()}</text>
       </g>);
     })()}
     {data.subtitle && (<g>
-      {Ic('heart', W/2-80, subY-6, 16, pal.p)}
-      <text x={W/2} y={subY+6} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.6" fontStyle="italic">{data.subtitle}</text>
+      {Ic('heart', W/2-90, bannerH+4, 18, pal.p)}
+      <text x={W/2} y={bannerH+16} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.55" fontStyle="italic">{data.subtitle}</text>
     </g>)}
 
-    {/* ── MAIN FLOW: large illustrations + keyword labels ── */}
+    {/* ── MAIN SECTIONS: huge illustrations with flow arrows ── */}
     {mainSecs.map((sec, i) => {
       const col = gc(pal, sec.color);
-      const cx = 20 + i * colW, centerX = cx + colW/2;
+      const cx = 30 + i * colW;
+      const centerX = cx + colW / 2;
       const hs = !!sec.scene;
       const sRng = mkR(seed + (sec.n||1) * 97);
-      const items = (sec.items||[]).slice(0,3).map(t2 => t2.length>20 ? t2.slice(0,18)+'…' : t2);
-      const titleY = flowStartY, titleH = 26;
-      const titleW = Math.min(colW-16, 180);
-      const sceneY = titleY + titleH + 16;
-      const sceneScale = la ? 1.7 : 1.4;
-      const sceneH = sceneScale * 75;
-      const labelY = sceneY + sceneH + 10;
+      const items = (sec.items||[]).slice(0,4).map(t2 => t2.length>22 ? t2.slice(0,20)+'…' : t2);
+      const titleW = Math.min(colW - 20, 200);
 
       return (<g key={i}>
-        {brushStroke(centerX-titleW/2, titleY-2, titleW, titleH, sRng, col, 0.18)}
-        <text x={centerX} y={titleY+18} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={pal.t} letterSpacing="1">
-          {sec.n}. {(sec.title||'').slice(0,18).toUpperCase()}
+        {/* Wide brush-stroke title background */}
+        {brushBg(centerX - titleW/2, flowY, titleW, titleZoneH, sRng, col)}
+        <text x={centerX} y={flowY + 22} textAnchor="middle" fontFamily="Caveat" fontSize="19" fontWeight="700" fill={pal.t} letterSpacing="1">
+          {sec.n}. {(sec.title||'').slice(0,20).toUpperCase()}
         </text>
-        {hs && Sc(sec.scene, centerX-52, sceneY, sceneScale, col)}
-        {!hs && Ic(sec.sym, centerX-35, sceneY+10, 70, col)}
-        {items.map((item,j) => (
+
+        {/* LARGE icon symbol — no stick figures, just bold icons */}
+        {(() => {
+          const ix = centerX - iconSize/2, iy = sceneZoneY + (sceneVisH - iconSize)/2;
+          return (<g>
+            {/* Soft circle highlight behind icon */}
+            <circle cx={centerX} cy={iy + iconSize/2} r={iconSize * 0.52} fill={col} opacity="0.08" />
+            <circle cx={centerX} cy={iy + iconSize/2} r={iconSize * 0.52} fill="none" stroke={col} strokeWidth="1.5" opacity="0.15" strokeDasharray="6,4" />
+            {Ic(sec.sym, ix, iy, iconSize, col)}
+          </g>);
+        })()}
+
+        {/* Keyword labels */}
+        {items.map((item, j) => (
           <g key={j}>
-            <circle cx={centerX-colW/2+20} cy={labelY+j*18+1} r="3" fill={col} opacity="0.6" />
-            <text x={centerX-colW/2+28} y={labelY+j*18+5} fontFamily="Patrick Hand" fontSize="13.5" fill={pal.t}>{item}</text>
+            <circle cx={cx + 10} cy={labelZoneY + j*19 + 1} r="3.5" fill={col} opacity="0.65" />
+            <text x={cx + 19} y={labelZoneY + j*19 + 5} fontFamily="Patrick Hand" fontSize="14" fill={pal.t}>{item}</text>
           </g>
         ))}
-        {i < mainSecs.length-1 && flowArrow(cx+colW-18, sceneY+sceneH/2, cx+colW+18, sceneY+sceneH/2, mkR(seed+i*67), pal.p)}
+
+        {/* BIG flow arrow → next section */}
+        {i < mainSecs.length - 1 && bigArrow(
+          cx + colW - 22, sceneZoneY + sceneVisH * 0.4,
+          cx + colW + 22, sceneZoneY + sceneVisH * 0.4,
+          mkR(seed + i*67), pal.p
+        )}
       </g>);
     })}
 
+    {/* ── Floating central message ── */}
     {data.cm && !hasTools && (<g>
-      <path d={rr(W/2-200, flowEndY-10, 400, 28, 14, rng, 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" />
-      {Ic('star', W/2-192, flowEndY-6, 16, pal.p)}
-      <text x={W/2} y={flowEndY+10} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">{data.cm}</text>
+      <path d={rr(W/2-210, flowBottom-8, 420, 30, 14, rng, 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" />
+      {Ic('star', W/2-200, flowBottom-4, 16, pal.p)}
+      <text x={W/2} y={flowBottom+14} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">{data.cm}</text>
     </g>)}
 
-    {/* ── BOTTOM TOOLBOX BAR ── */}
+    {/* ── TOOLBOX BAR (bottom) ── */}
     {hasTools && (() => {
-      const tbY = H - toolH - 4, tbRng = mkR(seed+555);
+      const tbY = H - toolH - 2, tbRng = mkR(seed+555);
       const toolItems = toolSecs.length > 0 ? toolSecs : [];
       const footerItems = data.footer?.items || [];
+      // Calculate positions for tool items + ZIEL
+      const hasCm = !!data.cm;
+      const toolAreaW = hasCm ? (W - 60) * 0.65 : (W - 60);
+      const zielAreaX = hasCm ? 30 + toolAreaW + 16 : 0;
+
       return (<g>
-        <path d={rr(16, tbY, W-32, toolH-4, 14, tbRng, 3)} fill="#fff" stroke={pal.p} strokeWidth="2" />
-        <path d={rr(W/2-120, tbY-14, 240, 28, 8, tbRng, 2)} fill={pal.bg} stroke={pal.p} strokeWidth="1.5" />
-        <text x={W/2} y={tbY+6} textAnchor="middle" fontFamily="Caveat" fontSize="17" fontWeight="700" fill={pal.p}>
+        <path d={rr(14, tbY, W-28, toolH-4, 14, tbRng, 3.5)} fill="#fff" stroke={pal.p} strokeWidth="2.2" />
+        {/* Title label centered */}
+        <path d={rr(W/2-130, tbY-16, 260, 30, 8, tbRng, 2.5)} fill={pal.bg} stroke={pal.p} strokeWidth="1.8" />
+        <text x={W/2} y={tbY+5} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={pal.p}>
           {data.footer?.title || 'MEIN WERKZEUGKASTEN'}
         </text>
-        {toolItems.length > 0 && toolItems.map((sec,i) => {
-          const tw = (W-80)/Math.max(toolItems.length,1), tx = 40+i*tw+tw/2, ty = tbY+26;
-          const col2 = gc(pal, sec.color), hs2 = !!sec.scene;
+
+        {/* Tool sections */}
+        {toolItems.length > 0 && toolItems.map((sec, i) => {
+          const tw = toolAreaW / Math.max(toolItems.length, 1);
+          const tx = 30 + i * tw + tw / 2;
+          const ty = tbY + 24;
+          const col2 = gc(pal, sec.color);
           return (<g key={`t${i}`}>
-            {hs2 ? Sc(sec.scene, tx-22, ty, 0.55, col2) : Ic(sec.sym, tx-16, ty+2, 34, col2)}
-            <text x={tx} y={ty+50} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="700" fill={col2}>{(sec.title||'').slice(0,16).toUpperCase()}</text>
+            {Ic(sec.sym, tx-18, ty, 38, col2)}
+            <text x={tx} y={ty+52} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill={col2}>{(sec.title||'').slice(0,18).toUpperCase()}</text>
             {(sec.items||[]).slice(0,1).map((item,j) => (
-              <text key={j} x={tx} y={ty+65+j*14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12" fill={pal.t} opacity="0.7">{item.length>20 ? item.slice(0,18)+'…' : item}</text>
+              <text key={j} x={tx} y={ty+68+j*14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12.5" fill={pal.t} opacity="0.65">{item.length>22 ? item.slice(0,20)+'…' : item}</text>
             ))}
           </g>);
         })}
-        {toolItems.length===0 && footerItems.length>0 && footerItems.map((item,i) => {
-          const fw = (W-80)/Math.max(footerItems.length,1), fx = 40+i*fw+fw/2, fy = tbY+30;
-          const icons2 = ['target','heart','star','checkmark','flag'];
+
+        {/* Footer items as icons (if no tool sections) */}
+        {toolItems.length === 0 && footerItems.length > 0 && footerItems.map((item, i) => {
+          const fw = toolAreaW / Math.max(footerItems.length, 1);
+          const fx = 30 + i * fw + fw / 2;
+          const fy = tbY + 28;
+          const ic = ['target','heart','star','checkmark','flag'];
           return (<g key={`f${i}`}>
-            {Ic(icons2[i%icons2.length], fx-14, fy, 28, pal.p)}
-            <text x={fx} y={fy+40} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="700" fill={pal.p}>{item.length>18 ? item.slice(0,16)+'…' : item}</text>
+            {Ic(ic[i%ic.length], fx-16, fy, 32, pal.p)}
+            <text x={fx} y={fy+44} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill={pal.p}>{item.length>18 ? item.slice(0,16)+'…' : item}</text>
           </g>);
         })}
-        {data.cm && (<g>
-          {Ic('heart', W-200, tbY+20, 22, pal.p)}
-          <text x={W-172} y={tbY+36} fontFamily="Caveat" fontSize="14" fontWeight="700" fill={pal.p}>ZIEL</text>
-          <text x={W-200} y={tbY+54} fontFamily="Patrick Hand" fontSize="12" fill={pal.t} fontStyle="italic">{(data.cm||'').slice(0,35)}</text>
-          {data.cm.length > 35 && <text x={W-200} y={tbY+68} fontFamily="Patrick Hand" fontSize="12" fill={pal.t} fontStyle="italic">{data.cm.slice(35,70)}</text>}
+
+        {/* ZIEL box (right side of toolbox) */}
+        {hasCm && (<g>
+          {Ic('heart', zielAreaX, tbY+20, 24, pal.p)}
+          <text x={zielAreaX+30} y={tbY+36} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={pal.p}>ZIEL</text>
+          <text x={zielAreaX} y={tbY+56} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{(data.cm||'').slice(0,40)}</text>
+          {data.cm.length > 40 && <text x={zielAreaX} y={tbY+72} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{data.cm.slice(40,80)}</text>}
         </g>)}
       </g>);
     })()}
@@ -690,9 +724,13 @@ export default function SketchnoteTool() {
 
     const eS = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' };
 
-    // Cycle through 4 styles
-    const cycleStyle = () => setRs(r => r === 'structured' ? 'free' : r === 'free' ? 'procards' : r === 'procards' ? 'bildstark' : 'structured');
-    const styleLabel = rs === 'structured' ? t.freeL : rs === 'free' ? t.proL : rs === 'procards' ? (t.bildL || '🖼️') : t.boxes;
+    // Style switch buttons (individual, showing active)
+    const styleButtons = [
+      ['structured', t.boxes || '📦'],
+      ['free', t.freeL || '🎨'],
+      ['procards', t.proL || '🃏'],
+      ['bildstark', t.bildL || '🖼️'],
+    ];
 
     if (fs) return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#fff', zIndex: 9999, overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -712,7 +750,13 @@ export default function SketchnoteTool() {
             <button onClick={() => { setPh('mode'); setMode(null); setAns({}); setSn(null); setErr(null); setEd(false); }} style={bt('#888', false)}>{t.neu}</button>
             <button onClick={() => gen(ans, mode)} style={bt('#E8584F', false)}>{t.reroll}</button>
             <button onClick={() => setEd(e2 => !e2)} style={bt(ed ? '#E8584F' : '#7B68AE', ed)}>{ed ? t.done : t.edit}</button>
-            <button onClick={cycleStyle} style={bt('#3B7DD8', false)}>{styleLabel}</button>
+          </div>
+          {/* Style switcher row */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 10, justifyContent: 'center' }}>
+            {styleButtons.map(([k, label]) => (
+              <button key={k} onClick={() => setRs(k)} style={{ padding: '5px 12px', borderRadius: 8, border: rs === k ? `2px solid #3B7DD8` : '2px solid #ddd', background: rs === k ? '#E8F0FE' : '#fff', fontFamily: 'Caveat,cursive', fontSize: 14, fontWeight: rs === k ? 700 : 400, cursor: 'pointer', color: rs === k ? '#3B7DD8' : '#888' }}>{label}</button>
+            ))}
+            <span style={{ borderLeft: '1px solid #ddd', margin: '0 4px' }} />
             <button onClick={() => setFs(true)} style={bt('#555', false)}>{t.fullscreen}</button>
             <button onClick={() => dlS(sn.title)} style={bt('#2E86AB', false)}>SVG</button>
             <button onClick={() => dlP(sn.title, pal)} style={bt('#4CAF50', false)}>PNG</button>
