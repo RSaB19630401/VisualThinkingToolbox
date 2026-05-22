@@ -64,9 +64,14 @@ Regeln: 4-7 Hauptäste, je 2-4 Unteräste. Kurze Begriffe (max 20 Zeichen). Alle
 // ── COMPARISON / VERGLEICHSBILD ──
 export async function callComparisonAPI(topic, layout, lang = 'de') {
   const tLang = { de: 'Deutsch', en: 'English', ru: 'Russisch' }[lang] || 'Deutsch';
-  const layoutHint = layout === 'venn' ? 'Venn-Diagramm mit Überschneidungen' : `${layout === '3col' ? '3' : layout === '4col' ? '4' : '2'} Spalten nebeneinander`;
+  const numCols = layout === '3col' ? 3 : layout === '4col' ? 4 : 2;
+  const isVenn = layout === 'venn';
+  const layoutHint = isVenn ? 'Venn-Diagramm mit 2 Gruppen + Überschneidungen' : `GENAU ${numCols} Spalten nebeneinander`;
+  const colors = ['primary', 'secondary', 'accent', 'primary'];
+  const colExample = Array.from({ length: numCols }, (_, i) => `{"label":"Spalte ${String.fromCharCode(65 + i)}","icon":"star","color":"${colors[i % colors.length]}","items":["Punkt1","Punkt2","Punkt3"]}`).join(',');
   const sys = `Vergleichsbild-Designer. NUR reines JSON. Layout: ${layoutHint}.
-JSON: {"title":"Vergleichstitel","subtitle":"..","columns":[{"label":"Spalte A","icon":"star","color":"primary","items":["Punkt1","Punkt2","Punkt3"]},{"label":"Spalte B","icon":"heart","color":"secondary","items":["Punkt1","Punkt2"]}]${layout === 'venn' ? ',"shared":["Gemeinsamkeit1","Gemeinsamkeit2"]' : ''},"conclusion":"Fazit-Satz"}
+JSON: {"title":"Vergleichstitel","subtitle":"..","columns":[${colExample}]${isVenn ? ',"shared":["Gemeinsamkeit1","Gemeinsamkeit2"]' : ''},"conclusion":"Fazit-Satz"}
+WICHTIG: Erzeuge GENAU ${numCols} columns! Nicht mehr, nicht weniger!
 Icons: idea,heart,star,checkmark,target,flag,rocket,clock,growth,person,shield,key,brain,eye,thumbsUp
 Regeln: Items max 25 Zeichen, Labels max 18 Zeichen. Alle Texte in ${tLang}!`;
   const usr = `THEMA: ${topic} JSON:`;
