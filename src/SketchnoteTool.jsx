@@ -1,9 +1,8 @@
-// SketchnoteTool.jsx — Main component: Wizard + 3 SVG renderers + Color control
+// SketchnoteTool.jsx — Main component: Wizard + 4 SVG renderers + Color control
 import React, { useState, useCallback, useRef } from 'react';
 import { mkR, rr, ln, arr } from './primitives.js';
 import { Sc, SCENE_NAMES } from './scenes.jsx';
 import { Ic, ICON_NAMES } from './icons.jsx';
-import { BsScene, BsFlowIcon } from './bildstark-icons.jsx';
 import { PAL, gc, MOOD_VALS, ORIENT_VALS, resolvePalette } from './palettes.js';
 import { FONT_CSS as FC, T } from './translations.js';
 import { callAPI } from './api.js';
@@ -316,171 +315,149 @@ function ProCardSVG({ data, pal }) {
 }
 
 /* ═══════════════════════════════════════════
-   BILDSTARK SVG (4th style — bold visuals, child-friendly)
-   Grid of cards matching reference image style:
-   ribbon banner, numbered cards, large illustrations,
-   checkmark bullets, process flow, dashed goal box
+   BILDSTARK SVG (4th style — organic flowing sketchnote)
+   NO cards, NO grid. Flowing horizontal layout with:
+   - Brush-stroke title backgrounds
+   - HUGE illustrations (main visual element)
+   - Big bold arrows connecting sections
+   - Minimal keyword labels
+   - Bottom toolbox bar
    ═══════════════════════════════════════════ */
+
+function brushStroke(x, y, w, h, rng, col, op = 0.2) {
+  const j = () => (rng() - 0.5) * 4;
+  const d = `M${x+4+j()},${y+h*0.3+j()} Q${x+w*0.15+j()},${y-2+j()} ${x+w*0.35+j()},${y+1+j()} Q${x+w*0.65+j()},${y-1+j()} ${x+w-4+j()},${y+h*0.25+j()} Q${x+w+2+j()},${y+h*0.6+j()} ${x+w-6+j()},${y+h-1+j()} Q${x+w*0.6+j()},${y+h+2+j()} ${x+w*0.3+j()},${y+h+j()} Q${x+2+j()},${y+h-1+j()} ${x+4+j()},${y+h*0.3+j()}Z`;
+  return <path d={d} fill={col} opacity={op} />;
+}
+
+function flowArrow(x1, y1, x2, y2, rng2, col) {
+  const mx = (x1+x2)/2, my = (y1+y2)/2 + (rng2()-0.5)*4, h = 12;
+  const a = Math.atan2(y2-y1, x2-x1);
+  return (<g>
+    <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke={col} strokeWidth="3.5" strokeLinecap="round" />
+    <path d={`M${x2},${y2} L${x2+Math.cos(a+2.6)*h},${y2+Math.sin(a+2.6)*h}`} stroke={col} strokeWidth="3" strokeLinecap="round" />
+    <path d={`M${x2},${y2} L${x2+Math.cos(a-2.6)*h},${y2+Math.sin(a-2.6)*h}`} stroke={col} strokeWidth="3" strokeLinecap="round" />
+  </g>);
+}
 
 function BildstarkSVG({ data, pal }) {
   const la = data.orientation !== 'portrait';
-  const W = la ? 1200 : 820, H = la ? 750 : 1200;
+  const W = la ? 1200 : 800, H = la ? 700 : 1100;
   const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
+
   const allSecs = data.sections.slice(0, 9);
+  const mainMax = la ? 5 : 4;
+  const mainCount = Math.min(allSecs.length, mainMax);
+  const mainSecs = allSecs.slice(0, mainCount);
+  const toolSecs = allSecs.slice(mainCount);
+  const hasTools = toolSecs.length > 0 || (data.footer?.items?.length > 0);
 
-  // Grid: 4 cols top, remaining below; process flow + goal box at bottom
-  const colsPerRow = la ? 4 : 3;
-  const topCount = Math.min(allSecs.length, colsPerRow);
-  const topSecs = allSecs.slice(0, topCount);
-  const botSecs = allSecs.slice(topCount, topCount + colsPerRow);
-  const extraSecs = allSecs.slice(topCount + colsPerRow);
+  const toolH = hasTools ? 130 : 0;
+  const bannerY = 8, bannerH = 56;
+  const subY = bannerH + 20;
+  const flowStartY = data.subtitle ? subY + 24 : bannerH + 22;
+  const flowEndY = H - toolH - 20;
+  const colW = (W - 40) / mainCount;
 
-  const pad = 16;
-  const gap = 14;
-  const usableW = W - pad * 2;
-  const bannerH = 62;
-  const subGap = data.subtitle ? 22 : 6;
-  const cardStartY = bannerH + subGap + 16;
-  const processH = 70;
-  const goalH = data.cm ? 72 : 0;
-  const bottomZone = Math.max(processH, goalH) + 10;
-
-  // Calculate card sizes
-  const rows = botSecs.length > 0 ? 2 : 1;
-  const extraRow = extraSecs.length > 0 ? 1 : 0;
-  const totalRows = rows + extraRow;
-  const availCardH = H - cardStartY - bottomZone - 10;
-  const cardH = (availCardH - (totalRows - 1) * gap) / totalRows;
-
-  const topCardW = (usableW - (topCount - 1) * gap) / topCount;
-  const botCount = botSecs.length || 1;
-  const botCardW = (usableW - (botCount - 1) * gap) / botCount;
-  const extraCount = extraSecs.length || 1;
-  const extraCardW = (usableW - (extraCount - 1) * gap) / extraCount;
-
-  // Ribbon banner
-  const bx = W / 2 - 280, bw = 560, by = 6;
-  const ribbonRng = mkR(seed + 11);
-
-  function renderCard(sec, cx, cy, cw, ch, isSmall) {
-    const col = gc(pal, sec.color);
-    const cardRng = mkR(seed + (sec.n || 1) * 173);
-    const hs = !!sec.scene;
-    const items = (sec.items || []).slice(0, isSmall ? 2 : 3).map(t2 => t2.length > 18 ? t2.slice(0, 16) + '…' : t2);
-    const tbH = isSmall ? 26 : 30;
-    const sceneY = cy + tbH + 10;
-    const sceneScale = isSmall ? 0.85 : 1.1;
-    const sceneH = isSmall ? 65 : 90;
-    const bullY = sceneY + sceneH + 2;
-
-    return (<g key={`c${sec.n}`}>
-      {/* Card bg */}
-      <path d={rr(cx, cy, cw, ch, 12, cardRng, 2.5)} fill="#fff" stroke={pal.t} strokeWidth="1.8" filter="url(#bsShadow)" />
-      {/* Title bar */}
-      <rect x={cx + 4} y={cy + 4} width={cw - 8} height={tbH} rx="6" fill={col} opacity="0.15" />
-      {/* Number */}
-      <circle cx={cx + 22} cy={cy + 4 + tbH / 2} r={isSmall ? 11 : 13} fill={col} />
-      <text x={cx + 22} y={cy + 4 + tbH / 2 + 5.5} textAnchor="middle" fontFamily="Caveat" fontSize={isSmall ? "14" : "16"} fontWeight="700" fill="#fff">{sec.n}</text>
-      {/* Title */}
-      <text x={cx + 42} y={cy + 4 + tbH / 2 + 5} fontFamily="Caveat" fontSize={isSmall ? "14" : "16"} fontWeight="700" fill={pal.t}>{(sec.title || '').slice(0, 18).toUpperCase()}</text>
-      {/* Illustration — LARGE, using BsScene for bold style */}
-      {hs && BsScene(sec.scene, cx + cw / 2 - 38, sceneY, sceneScale, col, pal.a)}
-      {!hs && Ic(sec.sym, cx + cw / 2 - 28, sceneY + 8, isSmall ? 44 : 56, col)}
-      {/* Checkmark bullets */}
-      {items.map((item, j) => {
-        const biy = bullY + j * (isSmall ? 17 : 19);
-        return (<g key={j}>
-          <path d={`M${cx + 13},${biy} L${cx + 17},${biy + 4} L${cx + 24},${biy - 4}`}
-            fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <text x={cx + 30} y={biy + 2} fontFamily="Patrick Hand" fontSize={isSmall ? "12" : "13"} fill={pal.t}>{item}</text>
-        </g>);
-      })}
-    </g>);
-  }
-
-  // Process flow icons (from footer items)
-  const flowItems = (data.footer?.items || []).slice(0, 5);
-  const flowIcons = ['magnify', 'funnel', 'eye', 'heart', 'star'];
-
-  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', background: pal.bg, borderRadius: 12 }}>
-    <defs>
-      <style>{FC}</style>
-      <filter id="bsShadow" x="-3%" y="-3%" width="108%" height="110%">
-        <feDropShadow dx="1.5" dy="2" stdDeviation="2.5" floodOpacity="0.07" />
-      </filter>
-    </defs>
+  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width:'100%', height:'100%', background: pal.bg, borderRadius:12 }}>
+    <defs><style>{FC}</style></defs>
     <rect width={W} height={H} fill={pal.bg} rx="10" />
-    <path d={rr(5, 5, W - 10, H - 10, 14, rng, 3)} fill="none" stroke={pal.t} strokeWidth="1.5" opacity="0.08" />
+    <path d={rr(6,6,W-12,H-12,16,rng,4)} fill="none" stroke={pal.p} strokeWidth="1.8" opacity="0.08" />
 
-    {/* ── RIBBON BANNER ── */}
-    <path d={`M${bx + 18},${by} L${bx + bw - 18},${by} L${bx + bw},${by + 7} L${bx + bw - 8},${by + bannerH - 12} L${bx + bw - 18},${by + bannerH - 6} L${bx + 18},${by + bannerH - 6} L${bx + 8},${by + bannerH - 12} L${bx},${by + 7}Z`}
-      fill={pal.p} stroke={pal.t} strokeWidth="1.2" opacity="0.92" />
-    <path d={`M${bx},${by + 7} L${bx + 10},${by + 14}`} stroke={pal.t} strokeWidth="1" opacity="0.25" />
-    <path d={`M${bx + bw},${by + 7} L${bx + bw - 10},${by + 14}`} stroke={pal.t} strokeWidth="1" opacity="0.25" />
-    {/* Deco lines */}
-    {[[-22, 10], [-30, 20], [bw + 14, 10], [bw + 22, 20]].map(([dx, dy], k) => (
-      <line key={k} x1={bx + dx + (ribbonRng() - 0.5) * 3} y1={by + dy} x2={bx + dx + 14} y2={by + dy - 5} stroke={pal.p} strokeWidth="2.5" opacity="0.35" strokeLinecap="round" />
-    ))}
-    <text x={W / 2} y={by + 40} textAnchor="middle" fontFamily="Caveat" fontSize="36" fontWeight="700" fill="#fff" letterSpacing="3">{data.title.toUpperCase()}</text>
-    {data.subtitle && <text x={W / 2} y={by + bannerH + 16} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.55">{data.subtitle}</text>}
-
-    {/* ── TOP ROW ── */}
-    {topSecs.map((sec, i) => renderCard(sec, pad + i * (topCardW + gap), cardStartY, topCardW, cardH, false))}
-
-    {/* ── BOTTOM ROW ── */}
-    {botSecs.length > 0 && botSecs.map((sec, i) => renderCard(sec, pad + i * (botCardW + gap), cardStartY + cardH + gap, botCardW, cardH, botSecs.length > 4))}
-
-    {/* ── EXTRA ROW (if 9 sections) ── */}
-    {extraSecs.length > 0 && extraSecs.map((sec, i) => renderCard(sec, pad + i * (extraCardW + gap), cardStartY + (cardH + gap) * 2, extraCardW, cardH, true))}
-
-    {/* ── PROCESS FLOW (bottom left) ── */}
-    {flowItems.length > 0 && (() => {
-      const flowW = data.cm ? usableW * 0.58 : usableW;
-      const flowY = H - bottomZone + 8;
-      const fItemW = flowW / Math.max(flowItems.length, 1);
+    {/* ── HAND-DRAWN BANNER ── */}
+    {(() => {
+      const bw = Math.min(W*0.6,580), bx = W/2-bw/2, bRng = mkR(seed+13);
       return (<g>
-        {/* Flow container */}
-        <path d={rr(pad, flowY - 4, flowW, processH - 6, 10, mkR(seed + 333), 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" opacity="0.4" />
-        {data.footer?.title && <text x={pad + 10} y={flowY + 12} fontFamily="Caveat" fontSize="13" fontWeight="700" fill={pal.p} opacity="0.7">{data.footer.title.toUpperCase()}</text>}
-        {flowItems.map((item, i) => {
-          const fx = pad + 10 + i * fItemW + fItemW / 2;
-          const fy = flowY + 22;
-          const iconName = flowIcons[i % flowIcons.length];
-          return (<g key={i}>
-            {BsFlowIcon(iconName, fx - 15, fy, 30, pal.p)}
-            <text x={fx} y={fy + 38} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12" fill={pal.t}>{item.length > 16 ? item.slice(0, 14) + '…' : item}</text>
-            {i < flowItems.length - 1 && (<g opacity="0.5">
-              <line x1={fx + fItemW / 2 - 16} y1={fy + 12} x2={fx + fItemW / 2 - 4} y2={fy + 12} stroke={pal.p} strokeWidth="2.5" strokeLinecap="round" />
-              <path d={`M${fx + fItemW / 2 - 8},${fy + 8} L${fx + fItemW / 2 - 2},${fy + 12} L${fx + fItemW / 2 - 8},${fy + 16}`} fill="none" stroke={pal.p} strokeWidth="2" strokeLinecap="round" />
-            </g>)}
-          </g>);
-        })}
+        <path d={`M${bx+12},${bannerY+4} L${bx+bw-12},${bannerY+4} Q${bx+bw},${bannerY+4} ${bx+bw},${bannerY+bannerH/2} Q${bx+bw},${bannerY+bannerH-4} ${bx+bw-12},${bannerY+bannerH-4} L${bx+12},${bannerY+bannerH-4} Q${bx},${bannerY+bannerH-4} ${bx},${bannerY+bannerH/2} Q${bx},${bannerY+4} ${bx+12},${bannerY+4}Z`}
+          fill="#fff" stroke={pal.t} strokeWidth="2.2" />
+        <path d={`M${bx+20},${bannerY+bannerH-8} Q${bx+bw/2},${bannerY+bannerH-4+(bRng()-0.5)*3} ${bx+bw-20},${bannerY+bannerH-8}`}
+          fill="none" stroke={pal.p} strokeWidth="3" strokeLinecap="round" />
+        <path d={`M${bx+40},${bannerY+bannerH-3} Q${bx+bw/2},${bannerY+bannerH+(bRng()-0.5)*3} ${bx+bw-40},${bannerY+bannerH-3}`}
+          fill="none" stroke={pal.p} strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
+        {[[-18,16],[-14,28],[bw+10,16],[bw+6,28]].map(([dx,dy],k) => (
+          <line key={k} x1={bx+dx} y1={bannerY+dy-4} x2={bx+dx+10} y2={bannerY+dy+2} stroke={pal.p} strokeWidth="2.5" opacity="0.4" strokeLinecap="round" />
+        ))}
+        <text x={W/2} y={bannerY+38} textAnchor="middle" fontFamily="Caveat" fontSize="32" fontWeight="700" fill={pal.t} letterSpacing="2">{data.title.toUpperCase()}</text>
       </g>);
     })()}
+    {data.subtitle && (<g>
+      {Ic('heart', W/2-80, subY-6, 16, pal.p)}
+      <text x={W/2} y={subY+6} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.6" fontStyle="italic">{data.subtitle}</text>
+    </g>)}
 
-    {/* ── DASHED GOAL BOX (bottom right) ── */}
-    {data.cm && (() => {
-      const goalW = data.footer?.items?.length > 0 ? usableW * 0.38 : usableW * 0.5;
-      const gx = W - pad - goalW;
-      const gy = H - bottomZone + 4;
-      const goalRng = mkR(seed + 777);
+    {/* ── MAIN FLOW: large illustrations + keyword labels ── */}
+    {mainSecs.map((sec, i) => {
+      const col = gc(pal, sec.color);
+      const cx = 20 + i * colW, centerX = cx + colW/2;
+      const hs = !!sec.scene;
+      const sRng = mkR(seed + (sec.n||1) * 97);
+      const items = (sec.items||[]).slice(0,3).map(t2 => t2.length>20 ? t2.slice(0,18)+'…' : t2);
+      const titleY = flowStartY, titleH = 26;
+      const titleW = Math.min(colW-16, 180);
+      const sceneY = titleY + titleH + 16;
+      const sceneScale = la ? 1.7 : 1.4;
+      const sceneH = sceneScale * 75;
+      const labelY = sceneY + sceneH + 10;
+
+      return (<g key={i}>
+        {brushStroke(centerX-titleW/2, titleY-2, titleW, titleH, sRng, col, 0.18)}
+        <text x={centerX} y={titleY+18} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={pal.t} letterSpacing="1">
+          {sec.n}. {(sec.title||'').slice(0,18).toUpperCase()}
+        </text>
+        {hs && Sc(sec.scene, centerX-52, sceneY, sceneScale, col)}
+        {!hs && Ic(sec.sym, centerX-35, sceneY+10, 70, col)}
+        {items.map((item,j) => (
+          <g key={j}>
+            <circle cx={centerX-colW/2+20} cy={labelY+j*18+1} r="3" fill={col} opacity="0.6" />
+            <text x={centerX-colW/2+28} y={labelY+j*18+5} fontFamily="Patrick Hand" fontSize="13.5" fill={pal.t}>{item}</text>
+          </g>
+        ))}
+        {i < mainSecs.length-1 && flowArrow(cx+colW-18, sceneY+sceneH/2, cx+colW+18, sceneY+sceneH/2, mkR(seed+i*67), pal.p)}
+      </g>);
+    })}
+
+    {data.cm && !hasTools && (<g>
+      <path d={rr(W/2-200, flowEndY-10, 400, 28, 14, rng, 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" />
+      {Ic('star', W/2-192, flowEndY-6, 16, pal.p)}
+      <text x={W/2} y={flowEndY+10} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">{data.cm}</text>
+    </g>)}
+
+    {/* ── BOTTOM TOOLBOX BAR ── */}
+    {hasTools && (() => {
+      const tbY = H - toolH - 4, tbRng = mkR(seed+555);
+      const toolItems = toolSecs.length > 0 ? toolSecs : [];
+      const footerItems = data.footer?.items || [];
       return (<g>
-        <path d={rr(gx, gy, goalW, goalH - 4, 14, goalRng, 2.5)} fill="#fff" stroke={pal.p} strokeWidth="2.5" strokeDasharray="8,5" />
-        {Ic('heart', gx + 14, gy + 10, 28, pal.p)}
-        <text x={gx + 48} y={gy + 26} fontFamily="Caveat" fontSize="20" fontWeight="700" fill={pal.p}>ZIEL</text>
-        {(() => {
-          const words = (data.cm || '').split(' ');
-          const lines = [];
-          let cur = '';
-          words.forEach(w => {
-            if ((cur + ' ' + w).trim().length > 36 && cur) { lines.push(cur.trim()); cur = w; }
-            else cur = cur ? cur + ' ' + w : w;
-          });
-          if (cur.trim()) lines.push(cur.trim());
-          return lines.slice(0, 2).map((line, li) => (
-            <text key={li} x={gx + 48} y={gy + 44 + li * 16} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{line}</text>
-          ));
-        })()}
+        <path d={rr(16, tbY, W-32, toolH-4, 14, tbRng, 3)} fill="#fff" stroke={pal.p} strokeWidth="2" />
+        <path d={rr(W/2-120, tbY-14, 240, 28, 8, tbRng, 2)} fill={pal.bg} stroke={pal.p} strokeWidth="1.5" />
+        <text x={W/2} y={tbY+6} textAnchor="middle" fontFamily="Caveat" fontSize="17" fontWeight="700" fill={pal.p}>
+          {data.footer?.title || 'MEIN WERKZEUGKASTEN'}
+        </text>
+        {toolItems.length > 0 && toolItems.map((sec,i) => {
+          const tw = (W-80)/Math.max(toolItems.length,1), tx = 40+i*tw+tw/2, ty = tbY+26;
+          const col2 = gc(pal, sec.color), hs2 = !!sec.scene;
+          return (<g key={`t${i}`}>
+            {hs2 ? Sc(sec.scene, tx-22, ty, 0.55, col2) : Ic(sec.sym, tx-16, ty+2, 34, col2)}
+            <text x={tx} y={ty+50} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="700" fill={col2}>{(sec.title||'').slice(0,16).toUpperCase()}</text>
+            {(sec.items||[]).slice(0,1).map((item,j) => (
+              <text key={j} x={tx} y={ty+65+j*14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12" fill={pal.t} opacity="0.7">{item.length>20 ? item.slice(0,18)+'…' : item}</text>
+            ))}
+          </g>);
+        })}
+        {toolItems.length===0 && footerItems.length>0 && footerItems.map((item,i) => {
+          const fw = (W-80)/Math.max(footerItems.length,1), fx = 40+i*fw+fw/2, fy = tbY+30;
+          const icons2 = ['target','heart','star','checkmark','flag'];
+          return (<g key={`f${i}`}>
+            {Ic(icons2[i%icons2.length], fx-14, fy, 28, pal.p)}
+            <text x={fx} y={fy+40} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="700" fill={pal.p}>{item.length>18 ? item.slice(0,16)+'…' : item}</text>
+          </g>);
+        })}
+        {data.cm && (<g>
+          {Ic('heart', W-200, tbY+20, 22, pal.p)}
+          <text x={W-172} y={tbY+36} fontFamily="Caveat" fontSize="14" fontWeight="700" fill={pal.p}>ZIEL</text>
+          <text x={W-200} y={tbY+54} fontFamily="Patrick Hand" fontSize="12" fill={pal.t} fontStyle="italic">{(data.cm||'').slice(0,35)}</text>
+          {data.cm.length > 35 && <text x={W-200} y={tbY+68} fontFamily="Patrick Hand" fontSize="12" fill={pal.t} fontStyle="italic">{data.cm.slice(35,70)}</text>}
+        </g>)}
       </g>);
     })()}
   </svg>);
