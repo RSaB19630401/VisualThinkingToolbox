@@ -1,7 +1,7 @@
 {
-  "name": "visual-thinking-toolbox",
-  "version": "2.0.0",
-  "description": "Visual Thinking Toolbox — AI-powered Bikablo-style visual tools",
+  "name": "sketchnote-visualizer",
+  "version": "1.0.0",
+  "description": "Bikablo-style Sketchnote Generator with AI",
   "type": "module",
   "scripts": {
     "dev": "vite",

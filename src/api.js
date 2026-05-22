@@ -1,22 +1,15 @@
-// api.js — Claude API communication for sketchnote generation
+// api.js — Anthropic API call via Cloudflare proxy
 import { SCENE_NAMES } from './scenes.jsx';
 import { ICON_NAMES } from './icons.jsx';
-import { MOOD_VALS, ORIENT_VALS } from './palettes.js';
+import { MOOD_VALS } from './palettes.js';
 import { T } from './translations.js';
 import { vd } from './validate.js';
 
-/**
- * Call the backend API (Cloudflare Worker → Claude) to generate a sketchnote.
- * @param {object}  answers  - User answers (from guided wizard or freetext)
- * @param {string}  mode     - 'guided' or 'free'
- * @param {number}  attempt  - Retry counter (max 2 retries on 429)
- * @param {string}  lang     - Language key ('de'|'en'|'ru')
- * @returns {object} Validated sketchnote data
- */
 export async function callAPI(answers, mode, attempt = 0, lang = 'de') {
   const scL = SCENE_NAMES.join(',');
   const syL = ICON_NAMES.join(',');
   const tLang = T[lang]?.apiLang || 'Deutsch';
+  const tl = T[lang] || T.de;
 
   const base = `Sketchnote-Designer, Bikablo-Stil. NUR reines JSON antworten. Keine Backticks, kein Text.
 Szenen:${scL}
@@ -27,13 +20,12 @@ Erste 4-5 Sektionen=Hauptstory,Rest=Werkzeugkasten. 7-9 Sektionen,2-3 kurze Stic
 WICHTIG: Alle Texte in ${tLang} schreiben!`;
 
   let sys, usr;
-  const tl = T[lang] || T.de;
-
   if (mode === 'guided') {
     const mi = tl.steps[5].o.indexOf(answers.mood);
     const mk = MOOD_VALS[mi >= 0 ? mi : 0] || 'neutral';
     const oi = tl.steps[6].o.indexOf(answers.orientation);
-    const or2 = ORIENT_VALS[oi >= 0 ? oi : 0] || 'landscape';
+    const ORIENT_VALS2 = ['landscape', 'portrait', 'auto'];
+    const or2 = ORIENT_VALS2[oi >= 0 ? oi : 0] || 'landscape';
     sys = base + ` Stimmung:${mk} Struktur:${answers.structure} Kontext:${answers.context} Orient:${or2 === 'auto' ? 'wähle' : or2}`;
     usr = `THEMA:${answers.topic} ZIEL:${answers.goal || ''} EXTRA:${answers.extras || ''} JSON:`;
   } else {
@@ -57,15 +49,12 @@ WICHTIG: Alle Texte in ${tLang} schreiben!`;
     await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
     return callAPI(answers, mode, attempt + 1, lang);
   }
-  if (!res.ok) throw new Error(
-    res.status === 429
-      ? 'Rate-Limit erreicht. Bitte 30s warten und erneut versuchen.'
-      : `API-Fehler ${res.status}`
-  );
+  if (!res.ok) throw new Error(res.status === 429
+    ? 'Rate-Limit erreicht. Bitte 30s warten und erneut versuchen.'
+    : `API-Fehler ${res.status}`);
 
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
-
   const text = (data.content || []).map(b => b.text || '').join('');
   if (!text.trim()) throw new Error('Leer');
 
@@ -77,6 +66,5 @@ WICHTIG: Alle Texte in ${tLang} schreiben!`;
     if (mt) p = JSON.parse(mt[0]);
     else throw new Error('JSON-Fehler');
   }
-
   return vd(p);
 }

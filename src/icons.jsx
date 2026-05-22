@@ -1,17 +1,19 @@
-// icons.js — 23 Bikablo-style icon symbols
+// icons.js — 23 small inline icons/symbols
 import React from 'react';
 
-/**
- * Render a named icon at position (x,y) with size s and color c.
- * Returns an SVG <g> element or null if the icon name is unknown.
- */
+export const ICON_NAMES = [
+  'idea','heart','star','checkmark','target','flag','rocket','clock',
+  'speech','growth','person','exclamation','question','document','loop',
+  'ear','handshake2','shield','key','brain','eye','thumbsUp','warning',
+];
+
 export function Ic(name, x, y, s, c) {
   const sc = s / 35;
   const t = `translate(${x},${y}) scale(${sc})`;
   const m = {
     idea: () => (<g transform={t}><ellipse cx="17" cy="14" rx="10" ry="11" fill="none" stroke={c} strokeWidth="2.5"/><line x1="13" y1="25" x2="21" y2="25" stroke={c} strokeWidth="2"/></g>),
     heart: () => (<g transform={t}><path d="M17,30 C0,20 0,5 9,3 C13,1 17,6 17,10 C17,6 21,1 25,3 C34,5 34,20 17,30Z" fill={c} opacity="0.8"/></g>),
-    star: () => { const p = []; for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5 - Math.PI / 2, r2 = i % 2 === 0 ? 14 : 6; p.push(`${17+r2*Math.cos(a)},${17+r2*Math.sin(a)}`); } return (<g transform={t}><polygon points={p.join(' ')} fill={c} opacity="0.8"/></g>); },
+    star: () => { const p=[]; for(let i=0;i<10;i++){const a=(i*Math.PI)/5-Math.PI/2,r2=i%2===0?14:6;p.push(`${17+r2*Math.cos(a)},${17+r2*Math.sin(a)}`);}return(<g transform={t}><polygon points={p.join(' ')} fill={c} opacity="0.8"/></g>); },
     checkmark: () => (<g transform={t}><path d="M5,18 L13,26 L29,8" fill="none" stroke={c} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/></g>),
     target: () => (<g transform={t}><circle cx="17" cy="17" r="15" fill="none" stroke={c} strokeWidth="2"/><circle cx="17" cy="17" r="9" fill="none" stroke={c} strokeWidth="2"/><circle cx="17" cy="17" r="3" fill={c}/></g>),
     flag: () => (<g transform={t}><line x1="6" y1="4" x2="6" y2="32" stroke={c} strokeWidth="2.5"/><path d="M6,4 L26,10 L6,17Z" fill={c} opacity="0.7"/></g>),
@@ -33,12 +35,5 @@ export function Ic(name, x, y, s, c) {
     thumbsUp: () => (<g transform={t}><path d="M12,14 L12,30 L24,30 L28,14Z" fill="none" stroke={c} strokeWidth="2.5"/><path d="M16,14 L16,8 Q16,4 20,4 L22,4 L22,14" fill="none" stroke={c} strokeWidth="2"/><line x1="12" y1="20" x2="6" y2="20" stroke={c} strokeWidth="2"/><line x1="12" y1="26" x2="6" y2="26" stroke={c} strokeWidth="2"/></g>),
     warning: () => (<g transform={t}><path d="M17,4 L2,32 L32,32Z" fill="none" stroke={c} strokeWidth="2.5" strokeLinejoin="round"/><line x1="17" y1="14" x2="17" y2="22" stroke={c} strokeWidth="2.5"/><circle cx="17" cy="27" r="2" fill={c}/></g>),
   };
-  try { const fn = m[name]; return fn ? fn() : null; } catch(e) { return null; }
+  try { const fn = m[name]; return fn ? fn() : null; } catch (e) { return null; }
 }
-
-/** All available icon names (must match keys in Ic) */
-export const ICON_NAMES = [
-  'idea','heart','star','checkmark','target','flag','rocket','clock',
-  'speech','growth','person','exclamation','question','document','loop',
-  'ear','handshake2','shield','key','brain','eye','thumbsUp','warning',
-];

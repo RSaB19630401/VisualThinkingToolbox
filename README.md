@@ -1,71 +1,82 @@
-# 🎨 Visual Thinking Toolbox
+# ✏️ Sketchnote Visualizer
 
-KI-gestützte Visual Thinking Tools — modular aufgebaut, erweiterbar.
+Bikablo-Stil Sketchnote-Generator mit KI. Erstellt aus Textbeschreibungen visuelle Sketchnotes mit Strichmännchen, Szenen-Illustrationen und visuellen Metaphern.
 
-## Modulare Struktur
+## Features
+
+- **Geführter Modus** – Schritt-für-Schritt-Wizard
+- **Freier Modus** – KI erkennt Struktur, Stimmung und Szenen automatisch
+- **Drei Darstellungsstile** – Strukturiert (Kästchen), Freie Skizze (Story-Flow), Profi-Karten (Banner + Cards)
+- **Farbsteuerung** – Grundfarbe vor Generierung wählen + Color-Picker im Edit-Panel
+- **26 Bikablo-Szenen** – Berg, Zielscheibe, Brücke, Leuchtturm, Strichmännchen...
+- **23 Icons** – Idee, Herz, Stern, Checkmark, Rakete...
+- **5 Stimmungs-Paletten** – Farben passen sich dem Inhalt an
+- **Export** – SVG, PNG, Projekt-JSON (speichern & laden)
+- **3 Sprachen** – Deutsch, Englisch, Russisch
+
+## Architektur (modular)
 
 ```
-src/
-├── App.jsx              ← Tool-Router (Hub/Startseite)
-├── SketchnoteTool.jsx   ← Sketchnote Generator (Haupttool)
-├── primitives.js        ← SVG-Zeichenhelfer (hand-drawn Stil)
-├── scenes.js            ← 26 Bikablo-Szenen
-├── icons.js             ← 23 Icon-Symbole
-├── palettes.js          ← 5 Stimmungs-Farbpaletten
-├── translations.js      ← i18n (DE/EN/RU)
-├── api.js               ← Claude API-Kommunikation
-├── downloads.js         ← SVG/PNG/JSON-Export
-├── validate.js          ← Datenvalidierung
-└── main.jsx             ← React Entry Point
+├── index.html
+├── src/
+│   ├── main.jsx              # Entry point
+│   ├── App.jsx               # Router wrapper
+│   ├── SketchnoteTool.jsx    # Wizard + 3 SVG-Renderer + Edit-Panel
+│   ├── primitives.js         # SVG-Zeichenhilfen (RNG, Rounded Rect, Lines)
+│   ├── scenes.js             # 26 Bikablo-Szenen-Illustrationen
+│   ├── icons.js              # 23 kleine Inline-Icons
+│   ├── palettes.js           # Farbpaletten + Grundfarben-Ableitung
+│   ├── translations.js       # DE/EN/RU Übersetzungen
+│   ├── api.js                # Anthropic API-Aufruf
+│   ├── downloads.js          # SVG/PNG/JSON Export
+│   └── validate.js           # API-Response-Validierung
+├── functions/
+│   └── api/
+│       └── generate.js       # Cloudflare Pages Function (API-Proxy)
+├── worker.js                 # Cloudflare Worker (standalone)
+├── package.json
+├── vite.config.js
+└── README.md
 ```
 
-## Features (v2.0)
+## Darstellungsstile
 
-- ✅ KI-generierte Bikablo-Sketchnotes (Claude API)
-- ✅ 26 Szenen + 23 Icons
-- ✅ Zwei Layouts: Kästchen (Strukturiert) + Freie Skizze
-- ✅ Geführter Wizard + Freier Modus
-- ✅ Inline-Bearbeitung + Neu würfeln
-- ✅ 3 Sprachen (DE/EN/RU)
-- ✅ Mobilansicht mit Vollbild
-- ✅ SVG/PNG/JSON Export
-- ✅ Tool-Router für zukünftige Tools
+### 📦 Strukturiert (Kästchen)
+Grid-Layout mit nummerierten Boxen, Pfeile zwischen Sektionen, klassische Sketchnote-Optik.
 
-## Geplante Tools
+### 🎨 Freie Skizze (Story-Flow)
+Horizontaler Erzählfluss, große Szenen-Illustrationen, Werkzeugkasten-Footer.
 
-- 🔲 Mind-Map
-- 🔲 Vorher/Nachher-Vergleich
-- 🔲 Wertequadrat
-- 🔲 Dark Mode + Sharing
+### 🃏 Profi-Karten (NEU)
+Ribbon-Banner-Titel, Karten-Container mit farbigen Titelleisten, große Illustrationen, Checkmark-Bullets, gestrichelte Ziel-Box mit Herz-Icon. Inspiriert vom Bikablo-Profi-Stil.
 
-## Setup
+## Farbsteuerung
 
-```bash
+- **Vor der Generierung:** Grundfarbe per Color-Picker wählen (optional)
+- **Grundfarbe + Stimmung:** Die Grundfarbe ersetzt die Primärfarbe; Stimmung beeinflusst Sekundär-/Akzentfarben und Hintergrund
+- **Im Edit-Panel:** Color-Picker zum nachträglichen Ändern der Grundfarbe
+- **Ohne Grundfarbe:** Standard-Stimmungspalette wird verwendet
+
+## Deployment: GitHub + Cloudflare Pages
+
+1. `git push` → Cloudflare Pages baut automatisch
+2. **Build command:** `npm run build`
+3. **Build output:** `dist`
+4. **Environment variable:** `ANTHROPIC_API_KEY` als Secret setzen
+
+## Lokale Entwicklung
+
+```
 npm install
-npm run dev        # Lokaler Dev-Server (Port 3000)
-npm run build      # Production Build
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .dev.vars
+npx wrangler pages dev -- npm run dev
 ```
 
-## Deployment (Cloudflare Pages)
+## Kosten
 
-1. **Cloudflare Dashboard** → Workers & Pages → Create → Pages
-2. **Connect to Git** → GitHub-Repo `VisualThinkingToolbox` auswählen
-3. **Build-Einstellungen:**
-   - Framework preset: `None`
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. **Environment Variables** (Settings → Environment Variables):
-   - `ANTHROPIC_API_KEY` = dein Claude API Key
-   - `NODE_VERSION` = `18`
-5. **Deploy** — fertig! Jeder Push auf `main` deployt automatisch.
+- **Cloudflare Pages:** Kostenlos (100.000 Requests/Monat)
+- **Anthropic API:** Pay-per-use (~$0.003-0.015 pro Sketchnote)
 
-Die Datei `functions/api/generate.js` wird automatisch als serverless Function unter `/api/generate` bereitgestellt.
+## Lizenz
 
-## Neues Tool hinzufügen
-
-1. Erstelle `src/MeinTool.jsx` mit `export default function MeinTool()`
-2. In `App.jsx` → `TOOLS`-Array ergänzen:
-   ```js
-   { id: 'meintool', name: 'Mein Tool', desc: '...', icon: '🔧', color: '#E8584F', ready: true, component: MeinTool }
-   ```
-3. Fertig — erscheint automatisch auf der Startseite.
+MIT

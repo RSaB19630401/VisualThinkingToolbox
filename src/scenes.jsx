@@ -1,10 +1,14 @@
 // scenes.js — 26 Bikablo-style scene illustrations
 import React from 'react';
 
-/**
- * Render a named Bikablo scene at position (x,y) with scale s and color c.
- * Returns an SVG <g> element or null if the scene name is unknown.
- */
+export const SCENE_NAMES = [
+  'mountainClimb','targetHit','bridge','seedToTree','lighthouse','teamCircle',
+  'ladder','compass','figureThinking','figureCelebrate','doorOpen','puzzleFit',
+  'figureHandshake','figureConversation','figureListening','figureHug',
+  'figureFear','figureDoubt','figureBalance','figureCourage','windingRoad',
+  'mirrorReflect','scaleBalance','networkNodes','treasure','wallBreak',
+];
+
 export function Sc(name, x, y, s, c) {
   const t = `translate(${x},${y}) scale(${s})`;
   const m = {
@@ -13,8 +17,8 @@ export function Sc(name, x, y, s, c) {
     bridge: () => (<g transform={t}><path d="M0,50 Q35,20 70,50" fill="none" stroke={c} strokeWidth="2.5"/><line x1="15" y1="42" x2="15" y2="65" stroke={c} strokeWidth="2"/><line x1="35" y1="32" x2="35" y2="65" stroke={c} strokeWidth="2"/><line x1="55" y1="42" x2="55" y2="65" stroke={c} strokeWidth="2"/><circle cx="10" cy="44" r="4" fill="none" stroke={c} strokeWidth="2"/><line x1="10" y1="48" x2="10" y2="56" stroke={c} strokeWidth="2"/><circle cx="62" cy="44" r="4" fill="none" stroke={c} strokeWidth="2"/><line x1="62" y1="48" x2="62" y2="56" stroke={c} strokeWidth="2"/></g>),
     seedToTree: () => (<g transform={t}><ellipse cx="10" cy="72" rx="6" ry="4" fill={c} opacity="0.3"/><line x1="35" y1="72" x2="35" y2="55" stroke={c} strokeWidth="2"/><ellipse cx="35" cy="55" rx="8" ry="10" fill="none" stroke={c} strokeWidth="2"/><line x1="58" y1="72" x2="58" y2="35" stroke={c} strokeWidth="2.5"/><path d="M44,28 Q58,8 72,28 Q65,20 58,22 Q51,20 44,28Z" fill="none" stroke={c} strokeWidth="2.5"/></g>),
     lighthouse: () => (<g transform={t}><path d="M28,80 L32,30 L38,30 L42,80Z" fill="none" stroke={c} strokeWidth="2.2"/><rect x="30" y="22" width="10" height="8" rx="1" fill="none" stroke={c} strokeWidth="2"/><path d="M32,22 L35,16 L38,22" fill="none" stroke={c} strokeWidth="2"/><path d="M18,25 L28,27 M52,25 L42,27" fill="none" stroke={c} strokeWidth="1.8" opacity="0.6"/></g>),
-    teamCircle: () => (<g transform={t}>{[0,72,144,216,288].map((a,i) => { const rd=a*Math.PI/180, cx2=35+22*Math.cos(rd), cy2=42+22*Math.sin(rd); return(<g key={i}><circle cx={cx2} cy={cy2-6} r="4" fill="none" stroke={c} strokeWidth="2"/><line x1={cx2} y1={cy2-2} x2={cx2} y2={cy2+6} stroke={c} strokeWidth="2"/></g>);})}<circle cx="35" cy="42" r="12" fill="none" stroke={c} strokeWidth="1.5" strokeDasharray="4,3"/></g>),
-    ladder: () => (<g transform={t}><line x1="22" y1="10" x2="22" y2="78" stroke={c} strokeWidth="2.5"/><line x1="42" y1="10" x2="42" y2="78" stroke={c} strokeWidth="2.5"/>{[18,30,42,54,66].map((py,i) => (<line key={i} x1="22" y1={py} x2="42" y2={py} stroke={c} strokeWidth="2"/>))}<circle cx="48" cy="38" r="4" fill="none" stroke={c} strokeWidth="2"/><line x1="48" y1="42" x2="48" y2="52" stroke={c} strokeWidth="2"/><line x1="42" y1="46" x2="54" y2="46" stroke={c} strokeWidth="2"/></g>),
+    teamCircle: () => (<g transform={t}>{[0,72,144,216,288].map((a,i)=>{const rd=a*Math.PI/180,cx2=35+22*Math.cos(rd),cy2=42+22*Math.sin(rd);return(<g key={i}><circle cx={cx2} cy={cy2-6} r="4" fill="none" stroke={c} strokeWidth="2"/><line x1={cx2} y1={cy2-2} x2={cx2} y2={cy2+6} stroke={c} strokeWidth="2"/></g>);})}<circle cx="35" cy="42" r="12" fill="none" stroke={c} strokeWidth="1.5" strokeDasharray="4,3"/></g>),
+    ladder: () => (<g transform={t}><line x1="22" y1="10" x2="22" y2="78" stroke={c} strokeWidth="2.5"/><line x1="42" y1="10" x2="42" y2="78" stroke={c} strokeWidth="2.5"/>{[18,30,42,54,66].map((py,i)=>(<line key={i} x1="22" y1={py} x2="42" y2={py} stroke={c} strokeWidth="2"/>))}<circle cx="48" cy="38" r="4" fill="none" stroke={c} strokeWidth="2"/><line x1="48" y1="42" x2="48" y2="52" stroke={c} strokeWidth="2"/><line x1="42" y1="46" x2="54" y2="46" stroke={c} strokeWidth="2"/></g>),
     compass: () => (<g transform={t}><circle cx="35" cy="42" r="28" fill="none" stroke={c} strokeWidth="2.5"/><circle cx="35" cy="42" r="3" fill={c}/><path d="M35,42 L35,18" stroke={c} strokeWidth="2.5" fill="none"/><path d="M30,20 L35,14 L40,20" fill={c} opacity="0.7"/><text x="33" y="12" fontFamily="Caveat" fontSize="10" fontWeight="700" fill={c}>N</text></g>),
     figureThinking: () => (<g transform={t}><circle cx="30" cy="20" r="6" fill="none" stroke={c} strokeWidth="2.5"/><line x1="30" y1="26" x2="30" y2="46" stroke={c} strokeWidth="2.5"/><line x1="30" y1="46" x2="24" y2="60" stroke={c} strokeWidth="2.5"/><line x1="30" y1="46" x2="36" y2="60" stroke={c} strokeWidth="2.5"/><path d="M22,34 L18,28 M38,34 L36,26" stroke={c} strokeWidth="2.5" fill="none"/><ellipse cx="46" cy="10" rx="12" ry="8" fill="none" stroke={c} strokeWidth="1.5" strokeDasharray="4,3"/><text x="42" y="14" fontFamily="Caveat" fontSize="11" fill={c}>?</text></g>),
     figureCelebrate: () => (<g transform={t}><circle cx="35" cy="22" r="6" fill="none" stroke={c} strokeWidth="2.5"/><line x1="35" y1="28" x2="35" y2="48" stroke={c} strokeWidth="2.5"/><line x1="35" y1="48" x2="29" y2="62" stroke={c} strokeWidth="2.5"/><line x1="35" y1="48" x2="41" y2="62" stroke={c} strokeWidth="2.5"/><path d="M27,34 L20,18 M43,34 L50,18" stroke={c} strokeWidth="2.5" fill="none"/></g>),
@@ -35,14 +39,5 @@ export function Sc(name, x, y, s, c) {
     treasure: () => (<g transform={t}><path d="M15,40 L15,65 L55,65 L55,40Z" fill="none" stroke={c} strokeWidth="2.5"/><path d="M15,40 Q35,30 55,40" fill="none" stroke={c} strokeWidth="2.5"/><line x1="35" y1="36" x2="35" y2="50" stroke={c} strokeWidth="2"/><circle cx="35" cy="50" r="3" fill={c}/><path d="M25,28 L30,18 M35,26 L35,14 M45,28 L40,18" stroke={c} strokeWidth="1.5" opacity="0.5"/></g>),
     wallBreak: () => (<g transform={t}><line x1="40" y1="5" x2="40" y2="75" stroke={c} strokeWidth="3"/><line x1="40" y1="5" x2="40" y2="25" stroke={c} strokeWidth="3"/><path d="M36,30 L32,35 L38,40 L34,48 L40,50" fill="none" stroke={c} strokeWidth="2.5"/><path d="M44,28 L48,34 L42,38 L46,46 L40,50" fill="none" stroke={c} strokeWidth="2.5"/><circle cx="22" cy="32" r="5" fill="none" stroke={c} strokeWidth="2.5"/><line x1="22" y1="37" x2="22" y2="52" stroke={c} strokeWidth="2.5"/><path d="M30,44 L36,38" stroke={c} strokeWidth="2.5" fill="none" strokeLinecap="round"/><line x1="22" y1="52" x2="18" y2="62" stroke={c} strokeWidth="2.5"/><line x1="22" y1="52" x2="26" y2="62" stroke={c} strokeWidth="2.5"/></g>),
   };
-  try { const fn = m[name]; return fn ? fn() : null; } catch(e) { return null; }
+  try { const fn = m[name]; return fn ? fn() : null; } catch (e) { return null; }
 }
-
-/** All available scene names (must match keys in Sc) */
-export const SCENE_NAMES = [
-  'mountainClimb','targetHit','bridge','seedToTree','lighthouse','teamCircle',
-  'ladder','compass','figureThinking','figureCelebrate','doorOpen','puzzleFit',
-  'figureHandshake','figureConversation','figureListening','figureHug',
-  'figureFear','figureDoubt','figureBalance','figureCourage','windingRoad',
-  'mirrorReflect','scaleBalance','networkNodes','treasure','wallBreak',
-];
