@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { mkR, rr, ln, arr } from './primitives.js';
 import { Sc, SCENE_NAMES } from './scenes.jsx';
 import { Ic, ICON_NAMES } from './icons.jsx';
+import { BsScene, BsFlowIcon } from './bildstark-icons.jsx';
 import { PAL, gc, MOOD_VALS, ORIENT_VALS, resolvePalette } from './palettes.js';
 import { FONT_CSS as FC, T } from './translations.js';
 import { callAPI } from './api.js';
@@ -315,6 +316,177 @@ function ProCardSVG({ data, pal }) {
 }
 
 /* ═══════════════════════════════════════════
+   BILDSTARK SVG (4th style — bold visuals, child-friendly)
+   Grid of cards matching reference image style:
+   ribbon banner, numbered cards, large illustrations,
+   checkmark bullets, process flow, dashed goal box
+   ═══════════════════════════════════════════ */
+
+function BildstarkSVG({ data, pal }) {
+  const la = data.orientation !== 'portrait';
+  const W = la ? 1200 : 820, H = la ? 750 : 1200;
+  const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
+  const allSecs = data.sections.slice(0, 9);
+
+  // Grid: 4 cols top, remaining below; process flow + goal box at bottom
+  const colsPerRow = la ? 4 : 3;
+  const topCount = Math.min(allSecs.length, colsPerRow);
+  const topSecs = allSecs.slice(0, topCount);
+  const botSecs = allSecs.slice(topCount, topCount + colsPerRow);
+  const extraSecs = allSecs.slice(topCount + colsPerRow);
+
+  const pad = 16;
+  const gap = 14;
+  const usableW = W - pad * 2;
+  const bannerH = 62;
+  const subGap = data.subtitle ? 22 : 6;
+  const cardStartY = bannerH + subGap + 16;
+  const processH = 70;
+  const goalH = data.cm ? 72 : 0;
+  const bottomZone = Math.max(processH, goalH) + 10;
+
+  // Calculate card sizes
+  const rows = botSecs.length > 0 ? 2 : 1;
+  const extraRow = extraSecs.length > 0 ? 1 : 0;
+  const totalRows = rows + extraRow;
+  const availCardH = H - cardStartY - bottomZone - 10;
+  const cardH = (availCardH - (totalRows - 1) * gap) / totalRows;
+
+  const topCardW = (usableW - (topCount - 1) * gap) / topCount;
+  const botCount = botSecs.length || 1;
+  const botCardW = (usableW - (botCount - 1) * gap) / botCount;
+  const extraCount = extraSecs.length || 1;
+  const extraCardW = (usableW - (extraCount - 1) * gap) / extraCount;
+
+  // Ribbon banner
+  const bx = W / 2 - 280, bw = 560, by = 6;
+  const ribbonRng = mkR(seed + 11);
+
+  function renderCard(sec, cx, cy, cw, ch, isSmall) {
+    const col = gc(pal, sec.color);
+    const cardRng = mkR(seed + (sec.n || 1) * 173);
+    const hs = !!sec.scene;
+    const items = (sec.items || []).slice(0, isSmall ? 2 : 3).map(t2 => t2.length > 18 ? t2.slice(0, 16) + '…' : t2);
+    const tbH = isSmall ? 26 : 30;
+    const sceneY = cy + tbH + 10;
+    const sceneScale = isSmall ? 0.85 : 1.1;
+    const sceneH = isSmall ? 65 : 90;
+    const bullY = sceneY + sceneH + 2;
+
+    return (<g key={`c${sec.n}`}>
+      {/* Card bg */}
+      <path d={rr(cx, cy, cw, ch, 12, cardRng, 2.5)} fill="#fff" stroke={pal.t} strokeWidth="1.8" filter="url(#bsShadow)" />
+      {/* Title bar */}
+      <rect x={cx + 4} y={cy + 4} width={cw - 8} height={tbH} rx="6" fill={col} opacity="0.15" />
+      {/* Number */}
+      <circle cx={cx + 22} cy={cy + 4 + tbH / 2} r={isSmall ? 11 : 13} fill={col} />
+      <text x={cx + 22} y={cy + 4 + tbH / 2 + 5.5} textAnchor="middle" fontFamily="Caveat" fontSize={isSmall ? "14" : "16"} fontWeight="700" fill="#fff">{sec.n}</text>
+      {/* Title */}
+      <text x={cx + 42} y={cy + 4 + tbH / 2 + 5} fontFamily="Caveat" fontSize={isSmall ? "14" : "16"} fontWeight="700" fill={pal.t}>{(sec.title || '').slice(0, 18).toUpperCase()}</text>
+      {/* Illustration — LARGE, using BsScene for bold style */}
+      {hs && BsScene(sec.scene, cx + cw / 2 - 38, sceneY, sceneScale, col, pal.a)}
+      {!hs && Ic(sec.sym, cx + cw / 2 - 28, sceneY + 8, isSmall ? 44 : 56, col)}
+      {/* Checkmark bullets */}
+      {items.map((item, j) => {
+        const biy = bullY + j * (isSmall ? 17 : 19);
+        return (<g key={j}>
+          <path d={`M${cx + 13},${biy} L${cx + 17},${biy + 4} L${cx + 24},${biy - 4}`}
+            fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <text x={cx + 30} y={biy + 2} fontFamily="Patrick Hand" fontSize={isSmall ? "12" : "13"} fill={pal.t}>{item}</text>
+        </g>);
+      })}
+    </g>);
+  }
+
+  // Process flow icons (from footer items)
+  const flowItems = (data.footer?.items || []).slice(0, 5);
+  const flowIcons = ['magnify', 'funnel', 'eye', 'heart', 'star'];
+
+  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', background: pal.bg, borderRadius: 12 }}>
+    <defs>
+      <style>{FC}</style>
+      <filter id="bsShadow" x="-3%" y="-3%" width="108%" height="110%">
+        <feDropShadow dx="1.5" dy="2" stdDeviation="2.5" floodOpacity="0.07" />
+      </filter>
+    </defs>
+    <rect width={W} height={H} fill={pal.bg} rx="10" />
+    <path d={rr(5, 5, W - 10, H - 10, 14, rng, 3)} fill="none" stroke={pal.t} strokeWidth="1.5" opacity="0.08" />
+
+    {/* ── RIBBON BANNER ── */}
+    <path d={`M${bx + 18},${by} L${bx + bw - 18},${by} L${bx + bw},${by + 7} L${bx + bw - 8},${by + bannerH - 12} L${bx + bw - 18},${by + bannerH - 6} L${bx + 18},${by + bannerH - 6} L${bx + 8},${by + bannerH - 12} L${bx},${by + 7}Z`}
+      fill={pal.p} stroke={pal.t} strokeWidth="1.2" opacity="0.92" />
+    <path d={`M${bx},${by + 7} L${bx + 10},${by + 14}`} stroke={pal.t} strokeWidth="1" opacity="0.25" />
+    <path d={`M${bx + bw},${by + 7} L${bx + bw - 10},${by + 14}`} stroke={pal.t} strokeWidth="1" opacity="0.25" />
+    {/* Deco lines */}
+    {[[-22, 10], [-30, 20], [bw + 14, 10], [bw + 22, 20]].map(([dx, dy], k) => (
+      <line key={k} x1={bx + dx + (ribbonRng() - 0.5) * 3} y1={by + dy} x2={bx + dx + 14} y2={by + dy - 5} stroke={pal.p} strokeWidth="2.5" opacity="0.35" strokeLinecap="round" />
+    ))}
+    <text x={W / 2} y={by + 40} textAnchor="middle" fontFamily="Caveat" fontSize="36" fontWeight="700" fill="#fff" letterSpacing="3">{data.title.toUpperCase()}</text>
+    {data.subtitle && <text x={W / 2} y={by + bannerH + 16} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.55">{data.subtitle}</text>}
+
+    {/* ── TOP ROW ── */}
+    {topSecs.map((sec, i) => renderCard(sec, pad + i * (topCardW + gap), cardStartY, topCardW, cardH, false))}
+
+    {/* ── BOTTOM ROW ── */}
+    {botSecs.length > 0 && botSecs.map((sec, i) => renderCard(sec, pad + i * (botCardW + gap), cardStartY + cardH + gap, botCardW, cardH, botSecs.length > 4))}
+
+    {/* ── EXTRA ROW (if 9 sections) ── */}
+    {extraSecs.length > 0 && extraSecs.map((sec, i) => renderCard(sec, pad + i * (extraCardW + gap), cardStartY + (cardH + gap) * 2, extraCardW, cardH, true))}
+
+    {/* ── PROCESS FLOW (bottom left) ── */}
+    {flowItems.length > 0 && (() => {
+      const flowW = data.cm ? usableW * 0.58 : usableW;
+      const flowY = H - bottomZone + 8;
+      const fItemW = flowW / Math.max(flowItems.length, 1);
+      return (<g>
+        {/* Flow container */}
+        <path d={rr(pad, flowY - 4, flowW, processH - 6, 10, mkR(seed + 333), 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" opacity="0.4" />
+        {data.footer?.title && <text x={pad + 10} y={flowY + 12} fontFamily="Caveat" fontSize="13" fontWeight="700" fill={pal.p} opacity="0.7">{data.footer.title.toUpperCase()}</text>}
+        {flowItems.map((item, i) => {
+          const fx = pad + 10 + i * fItemW + fItemW / 2;
+          const fy = flowY + 22;
+          const iconName = flowIcons[i % flowIcons.length];
+          return (<g key={i}>
+            {BsFlowIcon(iconName, fx - 15, fy, 30, pal.p)}
+            <text x={fx} y={fy + 38} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12" fill={pal.t}>{item.length > 16 ? item.slice(0, 14) + '…' : item}</text>
+            {i < flowItems.length - 1 && (<g opacity="0.5">
+              <line x1={fx + fItemW / 2 - 16} y1={fy + 12} x2={fx + fItemW / 2 - 4} y2={fy + 12} stroke={pal.p} strokeWidth="2.5" strokeLinecap="round" />
+              <path d={`M${fx + fItemW / 2 - 8},${fy + 8} L${fx + fItemW / 2 - 2},${fy + 12} L${fx + fItemW / 2 - 8},${fy + 16}`} fill="none" stroke={pal.p} strokeWidth="2" strokeLinecap="round" />
+            </g>)}
+          </g>);
+        })}
+      </g>);
+    })()}
+
+    {/* ── DASHED GOAL BOX (bottom right) ── */}
+    {data.cm && (() => {
+      const goalW = data.footer?.items?.length > 0 ? usableW * 0.38 : usableW * 0.5;
+      const gx = W - pad - goalW;
+      const gy = H - bottomZone + 4;
+      const goalRng = mkR(seed + 777);
+      return (<g>
+        <path d={rr(gx, gy, goalW, goalH - 4, 14, goalRng, 2.5)} fill="#fff" stroke={pal.p} strokeWidth="2.5" strokeDasharray="8,5" />
+        {Ic('heart', gx + 14, gy + 10, 28, pal.p)}
+        <text x={gx + 48} y={gy + 26} fontFamily="Caveat" fontSize="20" fontWeight="700" fill={pal.p}>ZIEL</text>
+        {(() => {
+          const words = (data.cm || '').split(' ');
+          const lines = [];
+          let cur = '';
+          words.forEach(w => {
+            if ((cur + ' ' + w).trim().length > 36 && cur) { lines.push(cur.trim()); cur = w; }
+            else cur = cur ? cur + ' ' + w : w;
+          });
+          if (cur.trim()) lines.push(cur.trim());
+          return lines.slice(0, 2).map((line, li) => (
+            <text key={li} x={gx + 48} y={gy + 44 + li * 16} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{line}</text>
+          ));
+        })()}
+      </g>);
+    })()}
+  </svg>);
+}
+
+/* ═══════════════════════════════════════════
    MAIN WIZARD & UI
    ═══════════════════════════════════════════ */
 
@@ -369,17 +541,18 @@ export default function SketchnoteTool() {
   const updSubtitle = (v) => { setSn(p => p ? { ...p, subtitle: v } : p); };
   const updCm = (v) => { setSn(p => p ? { ...p, cm: v } : p); };
 
-  const gen = useCallback(async (a, m) => {
+  const gen = useCallback(async (a, m, overrideStyle) => {
     setAns(a); setPh('loading'); setErr(null);
+    const currentStyle = overrideStyle || rs;
     try {
-      const d = await callAPI(a, m, 0, lang);
+      const d = await callAPI(a, m, 0, lang, currentStyle);
       const mi2 = t.steps[5].o.indexOf(a.mood);
       const mk = m === 'guided' ? (MOOD_VALS[mi2 >= 0 ? mi2 : 0] || 'neutral') : (d.mood && PAL[d.mood] ? d.mood : 'empathisch');
       setMoodKey(mk);
       setPal(resolvePalette(baseColor, mk));
       setSn(d); setPh('result');
     } catch (e) { console.error(e); setErr(e.message); setPh(m === 'guided' ? 'guided' : 'free'); }
-  }, [lang, t, baseColor]);
+  }, [lang, t, baseColor, rs]);
 
   // Detect style from wizard answer
   const detectStyle = (styleAnswer) => {
@@ -387,6 +560,7 @@ export default function SketchnoteTool() {
     const s = styleAnswer.toLowerCase();
     if (s.includes('frei') || s.includes('free') || s.includes('свободный')) return 'free';
     if (s.includes('profi') || s.includes('pro') || s.includes('профи') || s.includes('karten') || s.includes('cards') || s.includes('карт')) return 'procards';
+    if (s.includes('bild') || s.includes('visual') || s.includes('bold') || s.includes('нагляд')) return 'bildstark';
     return 'structured';
   };
 
@@ -485,8 +659,9 @@ export default function SketchnoteTool() {
               if (step < steps.length - 1) setStep(s => s + 1);
               else {
                 const sv = ans.style || '';
-                setRs(detectStyle(sv));
-                gen(ans, 'guided');
+                const detectedStyle = detectStyle(sv);
+                setRs(detectedStyle);
+                gen(ans, 'guided', detectedStyle);
               }
             }} disabled={!ok} style={{ ...bt(ok ? '#E8584F' : '#ccc', true), fontSize: 18 }}>{step < steps.length - 1 ? t.next : t.create}</button>
           </div>
@@ -503,14 +678,14 @@ export default function SketchnoteTool() {
         <h2 style={{ fontFamily: 'Caveat,cursive', fontSize: 24, fontWeight: 700, color: '#2D2D2D', marginBottom: 5 }}>{t.freeTitle}</h2>
         <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginBottom: 12 }}>{t.freeHint}</p>
         <textarea value={ft} onChange={e => setFt(e.target.value)} placeholder={t.freePh} style={{ width: '100%', minHeight: 160, padding: 15, borderRadius: 14, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 15, resize: 'vertical', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box', lineHeight: 1.6 }} />
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          {[['structured', t.structured], ['free', t.freeSketch], ['procards', t.proCards]].map(([k, la]) => (
-            <button key={k} onClick={() => setFrs(k)} style={{ flex: 1, padding: 10, borderRadius: 10, border: frs === k ? '2px solid #3B7DD8' : '2px solid #e0e0e0', background: frs === k ? '#F0F4FF' : '#FAFAFA', fontFamily: 'Caveat,cursive', fontSize: 15, cursor: 'pointer', color: '#2D2D2D' }}>{la}</button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {[['structured', t.structured], ['free', t.freeSketch], ['procards', t.proCards], ['bildstark', t.bildstark]].map(([k, la]) => (
+            <button key={k} onClick={() => setFrs(k)} style={{ flex: 1, minWidth: 100, padding: 10, borderRadius: 10, border: frs === k ? '2px solid #3B7DD8' : '2px solid #e0e0e0', background: frs === k ? '#F0F4FF' : '#FAFAFA', fontFamily: 'Caveat,cursive', fontSize: 15, cursor: 'pointer', color: '#2D2D2D' }}>{la}</button>
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
           <button onClick={() => setPh('mode')} style={bt('#888', false)}>{t.modeSel}</button>
-          <button onClick={() => { if (!ft.trim()) return; setRs(frs); gen({ freetext: ft }, 'free'); }} disabled={!ft.trim()} style={{ ...bt(ft.trim() ? '#3B7DD8' : '#ccc', true), fontSize: 18 }}>{t.create}</button>
+          <button onClick={() => { if (!ft.trim()) return; setRs(frs); gen({ freetext: ft }, 'free', frs); }} disabled={!ft.trim()} style={{ ...bt(ft.trim() ? '#3B7DD8' : '#ccc', true), fontSize: 18 }}>{t.create}</button>
         </div>
       </div>
     </div>
@@ -530,16 +705,17 @@ export default function SketchnoteTool() {
   if (ph === 'result' && sn) {
     let svg;
     try {
-      if (rs === 'procards') svg = <ProCardSVG data={sn} pal={pal} />;
+      if (rs === 'bildstark') svg = <BildstarkSVG data={sn} pal={pal} />;
+      else if (rs === 'procards') svg = <ProCardSVG data={sn} pal={pal} />;
       else if (rs === 'free') svg = <FreeSVG data={sn} pal={pal} />;
       else svg = <StructSVG data={sn} pal={pal} />;
     } catch (e) { svg = <div style={{ padding: 20, color: '#E8584F' }}>Error: {e.message}</div>; }
 
     const eS = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' };
 
-    // Cycle through 3 styles
-    const cycleStyle = () => setRs(r => r === 'structured' ? 'free' : r === 'free' ? 'procards' : 'structured');
-    const styleLabel = rs === 'structured' ? t.freeL : rs === 'free' ? t.proL : t.boxes;
+    // Cycle through 4 styles
+    const cycleStyle = () => setRs(r => r === 'structured' ? 'free' : r === 'free' ? 'procards' : r === 'procards' ? 'bildstark' : 'structured');
+    const styleLabel = rs === 'structured' ? t.freeL : rs === 'free' ? t.proL : rs === 'procards' ? (t.bildL || '🖼️') : t.boxes;
 
     if (fs) return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#fff', zIndex: 9999, overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
