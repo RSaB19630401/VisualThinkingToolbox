@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import Sc, { SCENE_NAMES } from "./Scenes.jsx";
-import Ic, { ICON_NAMES } from "./Icons.jsx";
+import { SCENE_NAMES } from "./Scenes.jsx";
+import { ICON_NAMES } from "./Icons.jsx";
+import { FC, PAL, gc } from "./helpers.js";
+import { StructSVG, JourneySVG, PosterSVG, FlowSVG } from "./Layouts.jsx";
 
-const FC = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');`;
 
 const T = {
   de: {
@@ -16,6 +17,7 @@ const T = {
     structured:'📦 Strukturiert', freeSketch:'🎨 Freie Skizze',
     loading:'Sketchnote wird erstellt...', neu:'← Neu', reroll:'🎲 Neu würfeln',
     edit:'📝 Bearbeiten', done:'✓ Fertig', boxes:'📦 Kästchen', freeL:'🎨 Frei',
+    layouts:{structured:'📦 Kästchen',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow'},
     save:'💾 Speichern', editTitle:'📝 Direkt bearbeiten',
     titleL:'Titel', subtitleL:'Untertitel', centralL:'Zentrale Botschaft',
     noScene:'Kein Bild', primary:'Primär', secondary:'Sekundär', accent:'Akzent',
@@ -43,6 +45,7 @@ const T = {
     structured:'📦 Structured', freeSketch:'🎨 Free Sketch',
     loading:'Creating sketchnote...', neu:'← New', reroll:'🎲 Reroll',
     edit:'📝 Edit', done:'✓ Done', boxes:'📦 Boxes', freeL:'🎨 Free',
+    layouts:{structured:'📦 Boxes',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow'},
     save:'💾 Save', editTitle:'📝 Edit directly',
     titleL:'Title', subtitleL:'Subtitle', centralL:'Central message',
     noScene:'No image', primary:'Primary', secondary:'Secondary', accent:'Accent',
@@ -70,6 +73,7 @@ const T = {
     structured:'📦 Структура', freeSketch:'🎨 Свободный',
     loading:'Создание скетчноута...', neu:'← Новый', reroll:'🎲 Перегенерировать',
     edit:'📝 Редактировать', done:'✓ Готово', boxes:'📦 Блоки', freeL:'🎨 Свободный',
+    layouts:{structured:'📦 Блоки',journey:'🗺️ Путь',poster:'📰 Постер',flow:'🔄 Поток'},
     save:'💾 Сохранить', editTitle:'📝 Прямое редактирование',
     titleL:'Заголовок', subtitleL:'Подзаголовок', centralL:'Главное сообщение',
     noScene:'Без картинки', primary:'Основной', secondary:'Вторичный', accent:'Акцент',
@@ -87,161 +91,6 @@ const T = {
     apiLang:'Russian',
   },
 };
-function mkR(seed) { let s = Math.abs(seed||42)%2147483646+1; return ()=>{ s=(s*16807)%2147483647; return(s-1)/2147483646; }; }
-function rr(x,y,w,h,rad,rng,a=2){ const r=()=>(rng()-0.5)*a,c=Math.min(rad,w/2,h/2); return `M${x+c+r()},${y+r()} L${x+w-c+r()},${y+r()} Q${x+w+r()},${y+r()} ${x+w+r()},${y+c+r()} L${x+w+r()},${y+h-c+r()} Q${x+w+r()},${y+h+r()} ${x+w-c+r()},${y+h+r()} L${x+c+r()},${y+h+r()} Q${x+r()},${y+h+r()} ${x+r()},${y+h-c+r()} L${x+r()},${y+c+r()} Q${x+r()},${y+r()} ${x+c+r()},${y+r()} Z`; }
-function ln(x1,y1,x2,y2,rng){ return `M${x1},${y1} Q${(x1+x2)/2+(rng()-0.5)*5},${(y1+y2)/2+(rng()-0.5)*5} ${x2},${y2}`; }
-function arr(x1,y1,x2,y2,rng,h=10){ const a=Math.atan2(y2-y1,x2-x1); return [ln(x1,y1,x2,y2,rng),`M${x2},${y2}L${x2+Math.cos(a+2.5)*h},${y2+Math.sin(a+2.5)*h}`,`M${x2},${y2}L${x2+Math.cos(a-2.5)*h},${y2+Math.sin(a-2.5)*h}`]; }
-function blob(cx,cy,rx,ry,rng){ const p=[]; for(let i=0;i<=16;i++){const a=(i/16)*Math.PI*2,d=1+(rng()-0.5)*0.25;p.push(`${cx+Math.cos(a)*rx*d},${cy+Math.sin(a)*ry*d}`);}return `M${p[0]} `+p.slice(1).map(v=>`L${v}`).join(' ')+' Z'; }
-function wt(t,m=22){ if(!t)return[];const w=t.split(' '),l=[];let c='';w.forEach(x=>{if((c+' '+x).trim().length>m&&c){l.push(c.trim());c=x;}else c=c?c+' '+x:x;});if(c.trim())l.push(c.trim());return l; }
-
-
-const PAL = {
-  optimistisch:{p:'#E8584F',s:'#F5A623',a:'#4CAF50',t:'#2D2D2D',bg:'#FFF8F0',sb:'#FFFAF5'},
-  neutral:{p:'#3B7DD8',s:'#6B7B8D',a:'#E8584F',t:'#2D2D2D',bg:'#F5F7FA',sb:'#F0F4F8'},
-  nachdenklich:{p:'#7B68AE',s:'#5A8F7B',a:'#D4A853',t:'#2D2D2D',bg:'#F8F5FF',sb:'#F3F0FA'},
-  energisch:{p:'#E8584F',s:'#FF6B35',a:'#FFD23F',t:'#2D2D2D',bg:'#FFF5F0',sb:'#FFF0EB'},
-  empathisch:{p:'#E07BAB',s:'#7DAFCB',a:'#95C77E',t:'#2D2D2D',bg:'#FFF5F9',sb:'#FFF0F5'},
-};
-function gc(pal,key){ return key==='secondary'?pal.s:key==='accent'?pal.a:pal.p; }
-
-function vd(d){
-  if(!d||typeof d!=='object')throw new Error('Ungültig');
-  return{title:String(d.title||'Sketchnote'),subtitle:d.subtitle?String(d.subtitle):'',orientation:d.orientation==='portrait'?'portrait':'landscape',mood:d.mood||'neutral',cm:d.centralMessage?String(d.centralMessage):'',
-    layout:{columns:Number(d.layout?.columns)||3},
-    sections:Array.isArray(d.sections)?d.sections.map((s,i)=>({n:s.number||i+1,title:String(s.title||''),scene:SCENE_NAMES.includes(s.scene)?s.scene:null,sym:ICON_NAMES.includes(s.symbol)?s.symbol:'star',color:s.color||'primary',items:Array.isArray(s.items)?s.items.map(String).slice(0,5):[]})):[],
-    footer:{title:String(d.footer?.title||''),items:Array.isArray(d.footer?.items)?d.footer.items.map(String).slice(0,4):[]},
-  };
-}
-
-/* ═══ STRUCTURED ═══ */
-function BoxSec({sec,x,y,w,h,pal,seed}){
-  const rng=mkR(seed+(sec.n||1)*137),col=gc(pal,sec.color),tY=y+28;
-  const hs=!!sec.scene,sw=hs?Math.min(w*0.38,80):0;
-  return(<g>
-    <path d={rr(x+2,y+2,w-4,h-4,14,rng,2.5)} fill={pal.sb} stroke={pal.t} strokeWidth="1.8" opacity="0.95"/>
-    <circle cx={x+20} cy={y+18} r="13" fill={col} opacity="0.9"/>
-    <text x={x+20} y={y+23.5} textAnchor="middle" fontFamily="Caveat" fontSize="16" fontWeight="700" fill="#fff">{sec.n}</text>
-    <text x={x+38} y={tY+3} fontFamily="Caveat" fontSize="17" fontWeight="700" fill={pal.t}>{(sec.title||'').toUpperCase()}</text>
-    <path d={ln(x+10,tY+8,x+w-10,tY+8,rng)} fill="none" stroke={col} strokeWidth="1.5" opacity="0.35"/>
-    {hs && Sc(sec.scene,x+w-sw-6,tY+12,Math.min(sw,75)/75,col)}
-    {!hs && Ic(sec.sym,x+w-40,y+6,28,col)}
-    {(sec.items||[]).slice(0,3).map((item,i)=>{const iy=tY+26+i*18;const txt=item.length>32?item.slice(0,30)+'…':item;return(<g key={i}><circle cx={x+16} cy={iy-3} r="2.5" fill={col} opacity="0.7"/><text x={x+24} y={iy} fontFamily="Patrick Hand" fontSize="12.5" fill={pal.t}>{txt}</text></g>);})}
-  </g>);
-}
-
-function StructSVG({data,pal}){
-  const la=data.orientation!=='portrait',W=la?1100:750,H=la?750:1050;
-  const cols=data.layout?.columns||(la?3:2),seed=(data.title||'').length*7+42,rng=mkR(seed);
-  const M=20,TH=88,fH=data.footer?.items?.length?66:0,cH2=data.cm?44:0;
-  const ch=H-TH-fH-cH2-M*2,cw=W-M*2,secs=data.sections,rows=Math.ceil(secs.length/cols),cW=cw/cols,cHh=ch/Math.max(rows,1);
-  return(<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%',background:pal.bg,borderRadius:12}}>
-    <defs><style>{FC}</style></defs><rect width={W} height={H} fill={pal.bg} rx="10"/>
-    <path d={rr(8,8,W-16,H-16,16,rng,3)} fill="none" stroke={pal.t} strokeWidth="2" opacity="0.12"/>
-    <path d={rr(M+30,12,cw-60,50,10,rng,3)} fill={pal.p} stroke={pal.t} strokeWidth="1.5" opacity="0.9"/>
-    <text x={W/2} y={46} textAnchor="middle" fontFamily="Caveat" fontSize="27" fontWeight="700" fill="#fff">{data.title.toUpperCase()}</text>
-    {data.subtitle&&<text x={W/2} y={78} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.65">{data.subtitle}</text>}
-    {secs.map((s,i)=>(<BoxSec key={i} sec={s} x={M+(i%cols)*cW+5} y={TH+Math.floor(i/cols)*cHh+5} w={cW-10} h={cHh-10} pal={pal} seed={seed}/>))}
-    {secs.length>1&&secs.slice(0,-1).map((_,i)=>{const fc=i%cols,fr=Math.floor(i/cols),tc=(i+1)%cols,tr=Math.floor((i+1)/cols),ar=mkR(seed+i*31);let x1,y1,x2,y2;if(tr===fr){x1=M+fc*cW+cW-6;y1=TH+fr*cHh+cHh/2;x2=M+tc*cW+12;y2=y1;}else{x1=M+fc*cW+cW/2;y1=TH+fr*cHh+cHh-2;x2=M+tc*cW+cW/2;y2=TH+tr*cHh+8;}return(<g key={`a${i}`} opacity="0.35">{arr(x1,y1,x2,y2,ar,8).map((p,j)=>(<path key={j} d={p} fill="none" stroke={pal.p} strokeWidth="2" strokeLinecap="round"/>))}</g>);})}
-    {data.cm&&<g><path d={rr(W/2-180,H-fH-M-cH2-2,360,34,18,rng,2)} fill="#fff" stroke={pal.p} strokeWidth="1.5"/>{Ic('star',W/2-172,H-fH-M-cH2+2,18,pal.p)}<text x={W/2} y={H-fH-M-cH2+22} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="600" fill={pal.p}>{data.cm}</text></g>}
-    {fH>0&&<g><path d={rr(M,H-fH-M+4,cw,54,10,mkR(seed+999),2)} fill={pal.bg} stroke={pal.p} strokeWidth="1.5" strokeDasharray="6,4"/>{data.footer.title&&<text x={M+16} y={H-fH-M+21} fontFamily="Caveat" fontSize="14" fontWeight="700" fill={pal.p}>{data.footer.title.toUpperCase()}</text>}{data.footer.items.map((it,i)=>{const ix=M+16+i*(cw/Math.max(data.footer.items.length,1));return(<g key={i}>{Ic('heart',ix,H-fH-M+24,13,pal.p)}<text x={ix+16} y={H-fH-M+42} fontFamily="Patrick Hand" fontSize="12" fill={pal.t}>{it}</text></g>);})}</g>}
-  </svg>);
-}
-
-/* ═══ FREE SKETCH ═══ */
-
-function FreeSVG({data,pal}){
-  const la=data.orientation!=='portrait',W=la?1120:760,H=la?660:1100;
-  const seed=(data.title||'').length*7+42,rng=mkR(seed);
-  const allSecs=data.sections.slice(0,9);
-  // Split: first 4-5 = main story, rest = toolbox
-  const mainCount=Math.min(allSecs.length,la?5:4);
-  const mainSecs=allSecs.slice(0,mainCount);
-  const toolSecs=allSecs.slice(mainCount);
-  const hasTools=toolSecs.length>0;
-  const toolH=hasTools?150:0;
-  const storyH=H-90-toolH-30;
-  const colW=la?(W-40)/mainCount:(W-40)/Math.min(mainCount,3);
-
-  return(<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%',background:pal.bg,borderRadius:12}}>
-    <defs><style>{FC}</style></defs>
-    <rect width={W} height={H} fill={pal.bg} rx="10"/>
-    <path d={rr(6,6,W-12,H-12,18,rng,4)} fill="none" stroke={pal.p} strokeWidth="2" opacity="0.12"/>
-
-    {/* Title banner */}
-    <path d={rr(W/2-220,10,440,50,8,rng,3)} fill={pal.p} stroke={pal.t} strokeWidth="1.5" opacity="0.9"/>
-    <text x={W/2} y={44} textAnchor="middle" fontFamily="Caveat" fontSize="28" fontWeight="700" fill="#fff" letterSpacing="2">{data.title.toUpperCase()}</text>
-    {data.subtitle&&<text x={W/2} y={76} textAnchor="middle" fontFamily="Patrick Hand" fontSize="14" fill={pal.t} opacity="0.6">{data.subtitle}</text>}
-
-    {/* Main story sections - horizontal flow */}
-    {mainSecs.map((sec,i)=>{
-      const col=gc(pal,sec.color);
-      const cx=20+i*colW+colW/2; // center x of this column
-      const sy=95; // story y start
-      const hs=!!sec.scene;
-      const items=(sec.items||[]).slice(0,4).map(t=>t.length>28?t.slice(0,26)+'…':t);
-      const sceneY=sy+50;
-      const bullY=sceneY+(hs?110:50);
-      return(<g key={i}>
-        {/* Title */}
-        <text x={cx} y={sy+12} textAnchor="middle" fontFamily="Caveat" fontSize="16" fontWeight="700" fill={pal.t}>{(sec.title||'').slice(0,22).toUpperCase()}</text>
-        <path d={ln(cx-50,sy+18,cx+50,sy+18,mkR(seed+i*77))} fill="none" stroke={col} strokeWidth="1.5" opacity="0.3"/>
-
-        {/* Large scene illustration */}
-        {hs && Sc(sec.scene,cx-45,sceneY,1.2,col)}
-        {!hs && Ic(sec.sym,cx-22,sceneY+10,50,col)}
-
-        {/* Bullet items below scene */}
-        {items.map((item,j)=>{
-          const by=bullY+j*18;
-          return(<g key={j}>
-            {Ic(sec.sym,cx-colW/2+12,by-8,14,col)}
-            <text x={cx-colW/2+30} y={by} fontFamily="Patrick Hand" fontSize="13" fill={pal.t}>{item}</text>
-          </g>);
-        })}
-
-        {/* Arrow to next section */}
-        {i<mainSecs.length-1&&(<g opacity="0.4">
-          {arr(cx+colW/2-15,sceneY+45,cx+colW/2+15,sceneY+45,mkR(seed+i*53),10).map((p,j)=>(<path key={j} d={p} fill="none" stroke={pal.p} strokeWidth="2.5" strokeLinecap="round"/>))}
-        </g>)}
-      </g>);
-    })}
-
-    {/* Central message */}
-    {data.cm&&(<g>
-      <path d={rr(W/2-200,H-toolH-55,400,30,15,rng,2)} fill="#fff" stroke={pal.p} strokeWidth="1.5"/>
-      {Ic('star',W/2-192,H-toolH-52,16,pal.p)}
-      <text x={W/2} y={H-toolH-35} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">{data.cm}</text>
-    </g>)}
-
-    {/* Toolbox / Footer area */}
-    {hasTools&&(<g>
-      <path d={rr(20,H-toolH-10,W-40,toolH,12,rng,3)} fill="none" stroke={pal.p} strokeWidth="2"/>
-      {/* Toolbox title */}
-      <path d={rr(W/2-110,H-toolH-22,220,26,6,rng,2)} fill={pal.bg} stroke={pal.p} strokeWidth="1.5"/>
-      <text x={W/2} y={H-toolH-4} textAnchor="middle" fontFamily="Caveat" fontSize="16" fontWeight="700" fill={pal.p}>{data.footer?.title||'MEIN WERKZEUGKASTEN'}</text>
-
-      {/* Tool items in a row */}
-      {toolSecs.map((sec,i)=>{
-        const col2=gc(pal,sec.color);
-        const tw=(W-80)/Math.max(toolSecs.length,1);
-        const tx=40+i*tw+tw/2;
-        const ty=H-toolH+30;
-        const hs2=!!sec.scene;
-        return(<g key={`t${i}`}>
-          {hs2?Sc(sec.scene,tx-25,ty-10,0.55,col2):Ic(sec.sym,tx-14,ty-4,32,col2)}
-          <text x={tx} y={ty+45} textAnchor="middle" fontFamily="Caveat" fontSize="13" fontWeight="700" fill={col2}>{(sec.title||'').slice(0,20).toUpperCase()}</text>
-          {(sec.items||[]).slice(0,2).map((item,j)=>(<text key={j} x={tx} y={ty+60+j*14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="11" fill={pal.t}>{item.length>24?item.slice(0,22)+'…':item}</text>))}
-        </g>);
-      })}
-    </g>)}
-
-    {/* Footer items if no toolbox */}
-    {!hasTools&&data.footer?.items?.length>0&&(<g>
-      <path d={rr(20,H-60,W-40,50,10,rng,2)} fill="none" stroke={pal.p} strokeWidth="1.5" strokeDasharray="6,4"/>
-      {data.footer.items.map((it,i)=>{const ix=40+i*((W-80)/Math.max(data.footer.items.length,1));return(<g key={i}>{Ic('heart',ix,H-48,14,pal.p)}<text x={ix+18} y={H-34} fontFamily="Patrick Hand" fontSize="12" fill={pal.t}>{it}</text></g>);})}
-    </g>)}
-  </svg>);
-}
 
 /* ═══ WIZARD ═══ */
 const MOOD_VALS=['optimistisch','neutral','nachdenklich','energisch','empathisch'];
@@ -296,7 +145,7 @@ export default function App(){
   const[rs,setRs]=useState('structured');
   const[step,setStep]=useState(0);
   const[ft,setFt]=useState('');
-  const[frs,setFrs]=useState('free');
+  const[frs,setFrs]=useState('flow');
   const[ed,setEd]=useState(false);
   const[lang,setLang]=useState('de');
   const[fs,setFs]=useState(false);
@@ -344,7 +193,7 @@ export default function App(){
         :(<div style={{display:'flex',flexDirection:'column',gap:7}}>{c.o.map(o=>(<button key={o} onClick={()=>setAns(a=>({...a,[c.id]:o}))} style={{padding:'10px 15px',borderRadius:12,textAlign:'left',fontFamily:'Patrick Hand,cursive',fontSize:15,cursor:'pointer',border:ans[c.id]===o?'2px solid #E8584F':'2px solid #e0e0e0',background:ans[c.id]===o?'#FFF5F0':'#FAFAFA',color:'#2D2D2D'}}>{o}</button>))}</div>)}
         <div style={{display:'flex',justifyContent:'space-between',marginTop:20}}>
           <button onClick={()=>step>0?setStep(s=>s-1):setPh('mode')} style={bt('#888',false)}>{step>0?t.back:t.modeSel}</button>
-          <button onClick={()=>{if(step<steps.length-1)setStep(s=>s+1);else{const sv=ans.style||'';setRs(sv.includes('Free')||sv.includes('Frei')||sv.includes('\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439')?'free':'structured');gen(ans,'guided');}}} disabled={!ok} style={{...bt(ok?'#E8584F':'#ccc',true),fontSize:18}}>{step<steps.length-1?t.next:t.create}</button>
+          <button onClick={()=>{if(step<steps.length-1)setStep(s=>s+1);else{const sv=ans.style||'';setRs(sv.includes('Free')||sv.includes('Frei')||sv.includes('\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439')?'flow':'structured');gen(ans,'guided');}}} disabled={!ok} style={{...bt(ok?'#E8584F':'#ccc',true),fontSize:18}}>{step<steps.length-1?t.next:t.create}</button>
         </div>
       </div>
     </div>);
@@ -356,8 +205,8 @@ export default function App(){
       <h2 style={{fontFamily:'Caveat,cursive',fontSize:24,fontWeight:700,color:'#2D2D2D',marginBottom:5}}>{t.freeTitle}</h2>
       <p style={{fontFamily:'Patrick Hand,cursive',fontSize:14,color:'#888',marginBottom:12}}>{t.freeHint}</p>
       <textarea value={ft} onChange={e=>setFt(e.target.value)} placeholder={t.freePh} style={{width:'100%',minHeight:160,padding:15,borderRadius:14,border:'2px solid #e0e0e0',fontFamily:'Patrick Hand,cursive',fontSize:15,resize:'vertical',outline:'none',background:'#FAFAFA',boxSizing:'border-box',lineHeight:1.6}}/>
-      <div style={{display:'flex',gap:8,marginTop:12}}>
-        {[['structured',t.structured],['free',t.freeSketch]].map(([k,la])=>(<button key={k} onClick={()=>setFrs(k)} style={{flex:1,padding:10,borderRadius:10,border:frs===k?'2px solid #3B7DD8':'2px solid #e0e0e0',background:frs===k?'#F0F4FF':'#FAFAFA',fontFamily:'Caveat,cursive',fontSize:15,cursor:'pointer',color:'#2D2D2D'}}>{la}</button>))}
+      <div style={{display:'flex',gap:6,marginTop:12,flexWrap:'wrap'}}>
+        {Object.entries((t.layouts||{})).map(([k,la])=>(<button key={k} onClick={()=>setFrs(k)} style={{flex:1,minWidth:70,padding:8,borderRadius:10,border:frs===k?'2px solid #3B7DD8':'2px solid #e0e0e0',background:frs===k?'#F0F4FF':'#FAFAFA',fontFamily:'Caveat,cursive',fontSize:14,cursor:'pointer',color:'#2D2D2D'}}>{la}</button>))}
       </div>
       <div style={{display:'flex',justifyContent:'space-between',marginTop:16}}>
         <button onClick={()=>setPh('mode')} style={bt('#888',false)}>{t.modeSel}</button>
@@ -375,7 +224,7 @@ export default function App(){
 
   if(ph==='result'&&sn){
     let svg;
-    try{svg=rs==='free'?<FreeSVG data={sn} pal={pal}/>:<StructSVG data={sn} pal={pal}/>;}
+    try{const L={structured:StructSVG,journey:JourneySVG,poster:PosterSVG,flow:FlowSVG};const Comp=L[rs]||StructSVG;svg=<Comp data={sn} pal={pal}/>;}
     catch(e){svg=<div style={{padding:20,color:'#E8584F'}}>Error: {e.message}</div>;}
     const eS={width:'100%',padding:'8px 10px',borderRadius:8,border:'2px solid #e0e0e0',fontFamily:'Patrick Hand,cursive',fontSize:14,outline:'none',boxSizing:'border-box',background:'#FAFAFA'};
 
@@ -394,7 +243,7 @@ export default function App(){
           <button onClick={()=>{setPh('mode');setMode(null);setAns({});setSn(null);setErr(null);setEd(false);}} style={bt('#888',false)}>{t.neu}</button>
           <button onClick={()=>gen(ans,mode)} style={bt('#E8584F',false)}>{t.reroll}</button>
           <button onClick={()=>setEd(e=>!e)} style={bt(ed?'#E8584F':'#7B68AE',ed)}>{ed?t.done:t.edit}</button>
-          <button onClick={()=>setRs(r=>r==='free'?'structured':'free')} style={bt('#3B7DD8',false)}>{rs==='free'?t.boxes:t.freeL}</button>
+          {Object.entries(t.layouts||{}).map(([k,la])=>(<button key={k} onClick={()=>setRs(k)} style={{...bt(rs===k?'#3B7DD8':'#999',rs===k),fontSize:14,padding:'7px 12px'}}>{la}</button>))}
           <button onClick={()=>setFs(true)} style={bt('#555',false)}>{t.fullscreen}</button>
           <button onClick={()=>dlS(sn.title)} style={bt('#2E86AB',false)}>SVG</button>
           <button onClick={()=>dlP(sn.title,pal)} style={bt('#4CAF50',false)}>PNG</button>
