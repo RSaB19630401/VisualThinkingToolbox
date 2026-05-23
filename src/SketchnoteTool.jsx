@@ -5,7 +5,7 @@ import { Sc, SCENE_NAMES } from './scenes.jsx';
 import { Ic, ICON_NAMES } from './icons.jsx';
 import { PAL, gc, MOOD_VALS, ORIENT_VALS, resolvePalette } from './palettes.js';
 import { FONT_CSS as FC, T } from './translations.js';
-import { GrChar, ThoughtBubble, poseForSection } from './gr-characters.jsx';
+import { GrChar, ThoughtBubble } from './gr-characters.jsx';
 import { callAPI } from './api.js';
 import { dlS, dlP, dlJ } from './downloads.js';
 import { vd } from './validate.js';
@@ -316,11 +316,12 @@ function ProCardSVG({ data, pal }) {
 }
 
 
+
 /* ═══════════════════════════════════════════
-   BILDSTARK SVG — Organic flowing sketchnote
-   Like "Erstkontakt" / "Guter Gesprächseinstieg" references:
-   HUGE illustrations, bold arrows, brush-stroke titles,
-   NO cards, NO grid, maximum visual impact
+   BILDSTARK SVG — Improved version
+   Character figures with expressions, organic flow,
+   thought bubbles, bold arrows, toolbox bar
+   Inspired by reference: "Erstkontakt leichter machen"
    ═══════════════════════════════════════════ */
 
 function brushBg(x, y, w, h, rng, col) {
@@ -337,129 +338,128 @@ function bigArrow(x1, y1, x2, y2, rng, col) {
   </g>);
 }
 
+// Map section index to character pose
+const SEC_POSES = ['thinking', 'presenting', 'pointing', 'confident', 'celebrating', 'questioning'];
+
 function BildstarkSVG({ data, pal }) {
   const la = data.orientation !== 'portrait';
   const W = la ? 1200 : 800, H = la ? 740 : 1100;
   const seed = (data.title||'').length*7+42, rng = mkR(seed);
+  const accent = pal.p;
+  const dark = '#2D2D2D';
   const allSecs = data.sections.slice(0, 9);
   const mainMax = la ? 5 : 3;
   const mainCount = Math.min(allSecs.length, mainMax);
   const mainSecs = allSecs.slice(0, mainCount);
   const toolSecs = allSecs.slice(mainCount);
   const hasTools = toolSecs.length > 0 || (data.footer?.items?.length > 0);
-  const toolH = hasTools ? 135 : 0;
-  const bannerH = 60;
-  const subGap = data.subtitle ? 28 : 8;
-  const flowY = bannerH + subGap + 10;
-  const flowBottom = H - toolH - 16;
-  const flowH = flowBottom - flowY;
-  const colW = (W - 60) / mainCount;
+  const toolH = hasTools ? 130 : 0;
 
-  // Title brush-stroke Y and icon area
-  const titleZoneH = 32;
-  const sceneZoneY = flowY + titleZoneH + 10;
-  const iconSize = la ? 130 : 100;
-  const sceneVisH = iconSize + 30; // icon + padding
-  const labelZoneY = sceneZoneY + sceneVisH;
+  // Layout zones
+  const bannerH = 58;
+  const subGap = data.subtitle ? 26 : 6;
+  const flowY = bannerH + subGap + 8;
+  const flowBottom = H - toolH - 14;
+  const colW = (W - 50) / mainCount;
 
-  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%',background:pal.bg,borderRadius:12}}>
+  // Character + icon zone
+  const titleZoneH = 30;
+  const charZoneY = flowY + titleZoneH + 8;
+  const charH = la ? 110 : 90; // character height
+  const labelZoneY = charZoneY + charH + 6;
+
+  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%',background:'#fff',borderRadius:12}}>
     <defs><style>{FC}</style></defs>
-    <rect width={W} height={H} fill={pal.bg} rx="10" />
-    <path d={rr(6,6,W-12,H-12,16,rng,4)} fill="none" stroke={pal.p} strokeWidth="1.5" opacity="0.07" />
+    <rect width={W} height={H} fill="#FFFFFF" rx="10" />
+    <path d={rr(6,6,W-12,H-12,16,rng,4)} fill="none" stroke={dark} strokeWidth="1.5" opacity="0.06" />
 
-    {/* ── BANNER: hand-drawn box with accent underlines ── */}
+    {/* ── BANNER TITLE ── */}
     {(() => {
       const bw = Math.min(W*0.65,620), bx = W/2-bw/2, by = 6, bRng = mkR(seed+13);
       return (<g>
-        <path d={rr(bx, by, bw, bannerH-8, 10, bRng, 4)} fill="#fff" stroke={pal.t} strokeWidth="2.5" />
-        {/* Bold accent underlines */}
-        <path d={`M${bx+16},${by+bannerH-10} Q${bx+bw/2},${by+bannerH-6+(bRng()-0.5)*4} ${bx+bw-16},${by+bannerH-10}`}
-          fill="none" stroke={pal.p} strokeWidth="4" strokeLinecap="round" />
+        <path d={rr(bx, by, bw, bannerH-8, 10, bRng, 4)} fill="#fff" stroke={dark} strokeWidth="2.5" />
+        <path d={`M${bx+16},${by+bannerH-10} Q${bx+bw/2},${by+bannerH-5+(bRng()-0.5)*4} ${bx+bw-16},${by+bannerH-10}`}
+          fill="none" stroke={accent} strokeWidth="4" strokeLinecap="round" />
         <path d={`M${bx+50},${by+bannerH-4} Q${bx+bw/2},${by+bannerH+(bRng()-0.5)*3} ${bx+bw-50},${by+bannerH-4}`}
-          fill="none" stroke={pal.p} strokeWidth="3" strokeLinecap="round" opacity="0.45" />
-        {/* Deco dashes */}
+          fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" opacity="0.4" />
         {[[-16,14],[-12,26],[bw+8,14],[bw+4,26]].map(([dx,dy],k) => (
-          <line key={k} x1={bx+dx} y1={by+dy-3} x2={bx+dx+12} y2={by+dy+3} stroke={pal.p} strokeWidth="3" opacity="0.4" strokeLinecap="round" />
+          <line key={k} x1={bx+dx} y1={by+dy-3} x2={bx+dx+12} y2={by+dy+3} stroke={accent} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
         ))}
-        <text x={W/2} y={by+38} textAnchor="middle" fontFamily="Caveat" fontSize="34" fontWeight="700" fill={pal.t} letterSpacing="2">{data.title.toUpperCase()}</text>
+        <text x={W/2} y={by+38} textAnchor="middle" fontFamily="Caveat" fontSize="32" fontWeight="700" fill={dark} letterSpacing="2">{data.title.toUpperCase()}</text>
       </g>);
     })()}
+
+    {/* Subtitle with heart */}
     {data.subtitle && (<g>
-      {Ic('heart', W/2-90, bannerH+4, 18, pal.p)}
-      <text x={W/2} y={bannerH+16} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.55" fontStyle="italic">{data.subtitle}</text>
+      {Ic('heart', W/2-90, bannerH+2, 16, accent)}
+      <text x={W/2} y={bannerH+14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={dark} opacity="0.5" fontStyle="italic">{data.subtitle}</text>
     </g>)}
 
-    {/* ── MAIN SECTIONS: huge illustrations with flow arrows ── */}
+    {/* ── MAIN SECTIONS: Characters + Icons + Labels ── */}
     {mainSecs.map((sec, i) => {
       const col = gc(pal, sec.color);
-      const cx = 30 + i * colW;
+      const cx = 25 + i * colW;
       const centerX = cx + colW / 2;
-      const hs = !!sec.scene;
       const sRng = mkR(seed + (sec.n||1) * 97);
       const items = (sec.items||[]).slice(0,4).map(t2 => t2.length>22 ? t2.slice(0,20)+'…' : t2);
-      const titleW = Math.min(colW - 20, 200);
+      const titleW = Math.min(colW - 16, 200);
+      const pose = SEC_POSES[i % SEC_POSES.length];
+      const charScale = la ? 1.2 : 1.0;
 
       return (<g key={i}>
-        {/* Wide brush-stroke title background */}
-        {brushBg(centerX - titleW/2, flowY, titleW, titleZoneH, sRng, col)}
-        <text x={centerX} y={flowY + 22} textAnchor="middle" fontFamily="Caveat" fontSize="19" fontWeight="700" fill={pal.t} letterSpacing="1">
+        {/* Brush-stroke title background */}
+        {brushBg(centerX - titleW/2, flowY, titleW, titleZoneH, sRng, accent)}
+        <text x={centerX} y={flowY + 21} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={dark} letterSpacing="1">
           {sec.n}. {(sec.title||'').slice(0,20).toUpperCase()}
         </text>
 
-        {/* LARGE icon symbol — no stick figures, just bold icons */}
-        {(() => {
-          const ix = centerX - iconSize/2, iy = sceneZoneY + (sceneVisH - iconSize)/2;
-          return (<g>
-            {/* Soft circle highlight behind icon */}
-            <circle cx={centerX} cy={iy + iconSize/2} r={iconSize * 0.52} fill={col} opacity="0.08" />
-            <circle cx={centerX} cy={iy + iconSize/2} r={iconSize * 0.52} fill="none" stroke={col} strokeWidth="1.5" opacity="0.15" strokeDasharray="6,4" />
-            {Ic(sec.sym, ix, iy, iconSize, col)}
-          </g>);
-        })()}
+        {/* Character figure OR large icon */}
+        {i < 4 ? (
+          GrChar(pose, centerX - 30*charScale, charZoneY, charScale, accent, dark)
+        ) : (
+          Ic(sec.sym, centerX - 35, charZoneY + 10, 70, accent)
+        )}
 
         {/* Keyword labels */}
         {items.map((item, j) => (
           <g key={j}>
-            <circle cx={cx + 10} cy={labelZoneY + j*19 + 1} r="3.5" fill={col} opacity="0.65" />
-            <text x={cx + 19} y={labelZoneY + j*19 + 5} fontFamily="Patrick Hand" fontSize="14" fill={pal.t}>{item}</text>
+            <circle cx={cx + 10} cy={labelZoneY + j*19 + 1} r="3.5" fill={accent} opacity="0.6" />
+            <text x={cx + 19} y={labelZoneY + j*19 + 5} fontFamily="Patrick Hand" fontSize="13.5" fill={dark}>{item}</text>
           </g>
         ))}
 
-        {/* BIG flow arrow → next section */}
-        {i < mainSecs.length - 1 && bigArrow(
-          cx + colW - 22, sceneZoneY + sceneVisH * 0.4,
-          cx + colW + 22, sceneZoneY + sceneVisH * 0.4,
-          mkR(seed + i*67), pal.p
+        {/* Big arrow to next section */}
+        {i < mainSecs.length-1 && bigArrow(
+          cx + colW - 20, charZoneY + charH * 0.4,
+          cx + colW + 20, charZoneY + charH * 0.4,
+          mkR(seed + i*67), accent
         )}
       </g>);
     })}
 
-    {/* ── Floating central message ── */}
+    {/* Floating central message */}
     {data.cm && !hasTools && (<g>
-      <path d={rr(W/2-210, flowBottom-8, 420, 30, 14, rng, 2)} fill="#fff" stroke={pal.p} strokeWidth="1.5" />
-      {Ic('star', W/2-200, flowBottom-4, 16, pal.p)}
-      <text x={W/2} y={flowBottom+14} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">{data.cm}</text>
+      <path d={rr(W/2-210, flowBottom-8, 420, 30, 14, rng, 2)} fill="#fff" stroke={accent} strokeWidth="1.5" />
+      {Ic('star', W/2-200, flowBottom-4, 16, accent)}
+      <text x={W/2} y={flowBottom+14} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={accent} fontStyle="italic">{data.cm}</text>
     </g>)}
 
-    {/* ── TOOLBOX BAR (bottom) ── */}
+    {/* ── TOOLBOX BAR ── */}
     {hasTools && (() => {
       const tbY = H - toolH - 2, tbRng = mkR(seed+555);
       const toolItems = toolSecs.length > 0 ? toolSecs : [];
       const footerItems = data.footer?.items || [];
-      // Calculate positions for tool items + ZIEL
       const hasCm = !!data.cm;
       const toolAreaW = hasCm ? (W - 60) * 0.65 : (W - 60);
-      const zielAreaX = hasCm ? 30 + toolAreaW + 16 : 0;
+      const zielX = hasCm ? 30 + toolAreaW + 16 : 0;
 
       return (<g>
-        <path d={rr(14, tbY, W-28, toolH-4, 14, tbRng, 3.5)} fill="#fff" stroke={pal.p} strokeWidth="2.2" />
-        {/* Title label centered */}
-        <path d={rr(W/2-130, tbY-16, 260, 30, 8, tbRng, 2.5)} fill={pal.bg} stroke={pal.p} strokeWidth="1.8" />
-        <text x={W/2} y={tbY+5} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={pal.p}>
+        <path d={rr(14, tbY, W-28, toolH-4, 14, tbRng, 3.5)} fill="#fff" stroke={accent} strokeWidth="2.2" />
+        <path d={rr(W/2-130, tbY-16, 260, 30, 8, tbRng, 2.5)} fill="#fff" stroke={accent} strokeWidth="1.8" />
+        <text x={W/2} y={tbY+5} textAnchor="middle" fontFamily="Caveat" fontSize="18" fontWeight="700" fill={accent}>
           {data.footer?.title || 'MEIN WERKZEUGKASTEN'}
         </text>
 
-        {/* Tool sections */}
         {toolItems.length > 0 && toolItems.map((sec, i) => {
           const tw = toolAreaW / Math.max(toolItems.length, 1);
           const tx = 30 + i * tw + tw / 2;
@@ -469,185 +469,30 @@ function BildstarkSVG({ data, pal }) {
             {Ic(sec.sym, tx-18, ty, 38, col2)}
             <text x={tx} y={ty+52} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill={col2}>{(sec.title||'').slice(0,18).toUpperCase()}</text>
             {(sec.items||[]).slice(0,1).map((item,j) => (
-              <text key={j} x={tx} y={ty+68+j*14} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12.5" fill={pal.t} opacity="0.65">{item.length>22 ? item.slice(0,20)+'…' : item}</text>
+              <text key={j} x={tx} y={ty+68} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12.5" fill={dark} opacity="0.6">{item.length>22 ? item.slice(0,20)+'…' : item}</text>
             ))}
           </g>);
         })}
 
-        {/* Footer items as icons (if no tool sections) */}
         {toolItems.length === 0 && footerItems.length > 0 && footerItems.map((item, i) => {
           const fw = toolAreaW / Math.max(footerItems.length, 1);
           const fx = 30 + i * fw + fw / 2;
           const fy = tbY + 28;
           const ic = ['target','heart','star','checkmark','flag'];
           return (<g key={`f${i}`}>
-            {Ic(ic[i%ic.length], fx-16, fy, 32, pal.p)}
-            <text x={fx} y={fy+44} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill={pal.p}>{item.length>18 ? item.slice(0,16)+'…' : item}</text>
+            {Ic(ic[i%ic.length], fx-16, fy, 32, accent)}
+            <text x={fx} y={fy+44} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill={accent}>{item.length>18 ? item.slice(0,16)+'…' : item}</text>
           </g>);
         })}
 
-        {/* ZIEL box (right side of toolbox) */}
         {hasCm && (<g>
-          {Ic('heart', zielAreaX, tbY+20, 24, pal.p)}
-          <text x={zielAreaX+30} y={tbY+36} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={pal.p}>ZIEL</text>
-          <text x={zielAreaX} y={tbY+56} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{(data.cm||'').slice(0,40)}</text>
-          {data.cm.length > 40 && <text x={zielAreaX} y={tbY+72} fontFamily="Patrick Hand" fontSize="13" fill={pal.t} fontStyle="italic">{data.cm.slice(40,80)}</text>}
+          {Ic('heart', zielX, tbY+18, 24, accent)}
+          <text x={zielX+30} y={tbY+34} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={accent}>ZIEL</text>
+          <text x={zielX} y={tbY+54} fontFamily="Patrick Hand" fontSize="13" fill={dark} fontStyle="italic">{(data.cm||'').slice(0,40)}</text>
+          {data.cm.length > 40 && <text x={zielX} y={tbY+70} fontFamily="Patrick Hand" fontSize="13" fill={dark} fontStyle="italic">{data.cm.slice(40,80)}</text>}
         </g>)}
       </g>);
     })()}
-  </svg>);
-}
-
-/* ═══════════════════════════════════════════
-   GRAPHIC RECORDING SVG (5th style)
-   B&W + one accent color, ribbon banner, thought bubble,
-   numbered step boxes with checkbox items, character figures,
-   summary box, footer bar
-   ═══════════════════════════════════════════ */
-
-function GraphicRecordingSVG({ data, pal }) {
-  const la = data.orientation !== 'portrait';
-  const W = la ? 1200 : 800, H = la ? 780 : 1200;
-  const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
-  const accent = pal.p; // user's chosen color as the single accent
-  const dark = '#2D2D2D';
-  const secs = data.sections.slice(0, 6); // max 6 steps for GR
-  const cols = la ? Math.min(secs.length, 3) : 2;
-  const rows = Math.ceil(secs.length / cols);
-
-  // Layout zones
-  const bannerH = 56;
-  const thoughtH = 90;
-  const stepsY = bannerH + thoughtH + 10;
-  const footerH = data.footer?.items?.length ? 50 : 0;
-  const summaryH = data.cm ? 50 : 0;
-  const stepsH = H - stepsY - summaryH - footerH - 20;
-  const stepW = (W - 50) / cols;
-  const stepH = (stepsH - 10) / rows;
-
-  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', background: '#fff', borderRadius: 12 }}>
-    <defs><style>{FC}</style></defs>
-    <rect width={W} height={H} fill="#FFFFFF" rx="10" />
-
-    {/* ── RIBBON BANNER ── */}
-    {(() => {
-      const bw = Math.min(W * 0.6, 560), bx = W / 2 - bw / 2, by = 8;
-      const bRng = mkR(seed + 5);
-      return (<g>
-        <path d={`M${bx + 14},${by + 4} L${bx + bw - 14},${by + 4} L${bx + bw + 6},${by + 12} L${bx + bw - 4},${by + bannerH - 10} L${bx + bw - 14},${by + bannerH - 4} L${bx + 14},${by + bannerH - 4} L${bx + 4},${by + bannerH - 10} L${bx - 6},${by + 12}Z`}
-          fill="#fff" stroke={dark} strokeWidth="2.5" />
-        <path d={`M${bx - 6},${by + 12} L${bx + 6},${by + 18}`} stroke={dark} strokeWidth="1.5" opacity="0.3" />
-        <path d={`M${bx + bw + 6},${by + 12} L${bx + bw - 6},${by + 18}`} stroke={dark} strokeWidth="1.5" opacity="0.3" />
-        <text x={W / 2} y={by + 38} textAnchor="middle" fontFamily="Caveat" fontSize="30" fontWeight="700" fill={dark} letterSpacing="2">{data.title.toUpperCase()}</text>
-      </g>);
-    })()}
-
-    {/* ── THOUGHT BUBBLE + CHARACTER ── */}
-    {data.subtitle && (() => {
-      const tbX = 80, tbY = bannerH + 10, tbW = Math.min(W * 0.45, 380), tbH = 60;
-      return (<g>
-        {/* Character (thinking pose) */}
-        {GrChar('thinking', 16, bannerH + 14, 0.9, accent, dark)}
-        {/* Thought bubble */}
-        {ThoughtBubble(tbX, tbY, tbW, tbH, dark)}
-        {/* Bubble text */}
-        <text x={tbX + tbW / 2} y={tbY + tbH / 2 + 5} textAnchor="middle" fontFamily="Patrick Hand" fontSize="14" fill={dark} fontStyle="italic">
-          {(data.subtitle || '').slice(0, 50)}
-        </text>
-      </g>);
-    })()}
-
-    {/* ── STEP BOXES ── */}
-    {secs.map((sec, i) => {
-      const col2 = i % cols;
-      const row = Math.floor(i / cols);
-      const sx = 25 + col2 * stepW;
-      const sy = stepsY + row * stepH;
-      const sw = stepW - 10;
-      const sh = stepH - 8;
-      const sRng = mkR(seed + i * 113);
-      const items = (sec.items || []).slice(0, 4);
-
-      return (<g key={i}>
-        {/* Step box */}
-        <path d={rr(sx, sy, sw, sh, 10, sRng, 2.5)} fill="#fff" stroke={dark} strokeWidth="1.8" />
-        {/* Numbered circle */}
-        <circle cx={sx + 22} cy={sy + 22} r="14" fill={accent} stroke={dark} strokeWidth="1.5" />
-        <text x={sx + 22} y={sy + 27} textAnchor="middle" fontFamily="Caveat" fontSize="16" fontWeight="700" fill="#fff">{sec.n}</text>
-        {/* Step title */}
-        <text x={sx + 42} y={sy + 27} fontFamily="Caveat" fontSize="17" fontWeight="700" fill={dark}>{(sec.title || '').slice(0, 22).toUpperCase()}</text>
-        {/* Divider line */}
-        <line x1={sx + 10} y1={sy + 38} x2={sx + sw - 10} y2={sy + 38} stroke={dark} strokeWidth="1" opacity="0.2" />
-        {/* Icon for the step */}
-        {Ic(sec.sym, sx + sw - 44, sy + 4, 34, accent)}
-        {/* Checkbox items */}
-        {items.map((item, j) => {
-          const iy = sy + 50 + j * 22;
-          const txt = item.startsWith('[X] ') ? item.slice(4) : item;
-          return (<g key={j}>
-            {/* Checkbox square */}
-            <rect x={sx + 14} y={iy - 8} width="12" height="12" rx="2" fill="none" stroke={dark} strokeWidth="1.5" />
-            {/* Checkmark in accent color */}
-            <path d={`M${sx + 16},${iy - 2} L${sx + 19},${iy + 2} L${sx + 25},${iy - 6}`} fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
-            <text x={sx + 32} y={iy + 2} fontFamily="Patrick Hand" fontSize="13" fill={dark}>{txt.slice(0, 28)}</text>
-          </g>);
-        })}
-
-        {/* Arrow to next step */}
-        {i < secs.length - 1 && (() => {
-          const nextCol = (i + 1) % cols;
-          const nextRow = Math.floor((i + 1) / cols);
-          if (nextRow === row) {
-            // Horizontal arrow
-            const ax = sx + sw + 2, ay = sy + sh / 2;
-            return (<g opacity="0.6">
-              <line x1={ax} y1={ay} x2={ax + 8} y2={ay} stroke={accent} strokeWidth="3" strokeLinecap="round" />
-              <path d={`M${ax + 4},${ay - 5} L${ax + 10},${ay} L${ax + 4},${ay + 5}`} fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
-            </g>);
-          } else if (nextCol === 0) {
-            // Down + back arrow
-            const ax = sx + sw / 2, ay = sy + sh + 2;
-            return (<g opacity="0.4">
-              <path d={`M${ax},${ay} L${ax},${ay + 4}`} stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
-              <path d={`M${ax - 4},${ay + 1} L${ax},${ay + 5} L${ax + 4},${ay + 1}`} fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
-            </g>);
-          }
-          return null;
-        })()}
-      </g>);
-    })}
-
-    {/* ── SUMMARY BOX (Erinnerung) ── */}
-    {data.cm && (() => {
-      const sy2 = H - footerH - summaryH - 10;
-      const sumRng = mkR(seed + 888);
-      return (<g>
-        <path d={rr(25, sy2, W - 50, summaryH - 4, 10, sumRng, 2.5)} fill="#fff" stroke={accent} strokeWidth="2.5" />
-        {/* Star icon */}
-        {Ic('star', 34, sy2 + 6, 24, accent)}
-        <text x={66} y={sy2 + 22} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={accent}>ERINNERUNG</text>
-        <text x={W / 2} y={sy2 + 40} textAnchor="middle" fontFamily="Patrick Hand" fontSize="14" fontWeight="600" fill={dark}>{data.cm}</text>
-      </g>);
-    })()}
-
-    {/* ── FOOTER BAR ── */}
-    {footerH > 0 && (() => {
-      const fy = H - footerH - 4;
-      const fitems = data.footer.items || [];
-      return (<g>
-        <line x1={20} y1={fy} x2={W - 20} y2={fy} stroke={dark} strokeWidth="1" opacity="0.15" />
-        {fitems.map((item, i) => {
-          const fx = 30 + i * ((W - 60) / Math.max(fitems.length, 1));
-          return (<g key={i}>
-            <circle cx={fx} cy={fy + 20} r="3" fill={accent} />
-            <text x={fx + 8} y={fy + 24} fontFamily="Patrick Hand" fontSize="12.5" fill={dark} opacity="0.7">{(item || '').slice(0, 30)}</text>
-          </g>);
-        })}
-      </g>);
-    })()}
-
-    {/* Celebrating character (bottom right) */}
-    {GrChar('celebrating', W - 80, H - 90, 0.7, accent, dark)}
   </svg>);
 }
 
@@ -726,7 +571,6 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
     if (s.includes('frei') || s.includes('free') || s.includes('свободный')) return 'free';
     if (s.includes('profi') || s.includes('pro') || s.includes('профи') || s.includes('karten') || s.includes('cards') || s.includes('карт')) return 'procards';
     if (s.includes('bild') || s.includes('visual') || s.includes('bold') || s.includes('нагляд')) return 'bildstark';
-    if (s.includes('graphic') || s.includes('recording') || s.includes('графич')) return 'graphicrec';
     return 'structured';
   };
 
@@ -846,7 +690,6 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
         <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginBottom: 12 }}>{t.freeHint}</p>
         <textarea value={ft} onChange={e => setFt(e.target.value)} placeholder={t.freePh} style={{ width: '100%', minHeight: 160, padding: 15, borderRadius: 14, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 15, resize: 'vertical', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box', lineHeight: 1.6 }} />
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {[['structured', t.structured], ['free', t.freeSketch], ['procards', t.proCards], ['bildstark', t.bildstark], ['graphicrec', t.graphicRec || '🎬 Graphic Recording']].map(([k, la]) => (
             <button key={k} onClick={() => setFrs(k)} style={{ flex: 1, minWidth: 100, padding: 10, borderRadius: 10, border: frs === k ? '2px solid #3B7DD8' : '2px solid #e0e0e0', background: frs === k ? '#F0F4FF' : '#FAFAFA', fontFamily: 'Caveat,cursive', fontSize: 15, cursor: 'pointer', color: '#2D2D2D' }}>{la}</button>
           ))}
         </div>
@@ -872,8 +715,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
   if (ph === 'result' && sn) {
     let svg;
     try {
-      if (rs === 'graphicrec') svg = <GraphicRecordingSVG data={sn} pal={pal} />;
-      else if (rs === 'bildstark') svg = <BildstarkSVG data={sn} pal={pal} />;
+      if (rs === 'bildstark') svg = <BildstarkSVG data={sn} pal={pal} />;
       else if (rs === 'procards') svg = <ProCardSVG data={sn} pal={pal} />;
       else if (rs === 'free') svg = <FreeSVG data={sn} pal={pal} />;
       else svg = <StructSVG data={sn} pal={pal} />;
@@ -887,7 +729,6 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
       ['free', t.freeL || '🎨'],
       ['procards', t.proL || '🃏'],
       ['bildstark', t.bildL || '🖼️'],
-      ['graphicrec', t.grL || '🎬'],
     ];
 
     if (fs) return (
