@@ -5,6 +5,7 @@ import { Sc, SCENE_NAMES } from './scenes.jsx';
 import { Ic, ICON_NAMES } from './icons.jsx';
 import { PAL, gc, MOOD_VALS, ORIENT_VALS, resolvePalette } from './palettes.js';
 import { FONT_CSS as FC, T } from './translations.js';
+import { GrChar, ThoughtBubble, poseForSection } from './gr-characters.jsx';
 import { callAPI } from './api.js';
 import { dlS, dlP, dlJ } from './downloads.js';
 import { vd } from './validate.js';
@@ -498,6 +499,159 @@ function BildstarkSVG({ data, pal }) {
 }
 
 /* ═══════════════════════════════════════════
+   GRAPHIC RECORDING SVG (5th style)
+   B&W + one accent color, ribbon banner, thought bubble,
+   numbered step boxes with checkbox items, character figures,
+   summary box, footer bar
+   ═══════════════════════════════════════════ */
+
+function GraphicRecordingSVG({ data, pal }) {
+  const la = data.orientation !== 'portrait';
+  const W = la ? 1200 : 800, H = la ? 780 : 1200;
+  const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
+  const accent = pal.p; // user's chosen color as the single accent
+  const dark = '#2D2D2D';
+  const secs = data.sections.slice(0, 6); // max 6 steps for GR
+  const cols = la ? Math.min(secs.length, 3) : 2;
+  const rows = Math.ceil(secs.length / cols);
+
+  // Layout zones
+  const bannerH = 56;
+  const thoughtH = 90;
+  const stepsY = bannerH + thoughtH + 10;
+  const footerH = data.footer?.items?.length ? 50 : 0;
+  const summaryH = data.cm ? 50 : 0;
+  const stepsH = H - stepsY - summaryH - footerH - 20;
+  const stepW = (W - 50) / cols;
+  const stepH = (stepsH - 10) / rows;
+
+  return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', background: '#fff', borderRadius: 12 }}>
+    <defs><style>{FC}</style></defs>
+    <rect width={W} height={H} fill="#FFFFFF" rx="10" />
+
+    {/* ── RIBBON BANNER ── */}
+    {(() => {
+      const bw = Math.min(W * 0.6, 560), bx = W / 2 - bw / 2, by = 8;
+      const bRng = mkR(seed + 5);
+      return (<g>
+        <path d={`M${bx + 14},${by + 4} L${bx + bw - 14},${by + 4} L${bx + bw + 6},${by + 12} L${bx + bw - 4},${by + bannerH - 10} L${bx + bw - 14},${by + bannerH - 4} L${bx + 14},${by + bannerH - 4} L${bx + 4},${by + bannerH - 10} L${bx - 6},${by + 12}Z`}
+          fill="#fff" stroke={dark} strokeWidth="2.5" />
+        <path d={`M${bx - 6},${by + 12} L${bx + 6},${by + 18}`} stroke={dark} strokeWidth="1.5" opacity="0.3" />
+        <path d={`M${bx + bw + 6},${by + 12} L${bx + bw - 6},${by + 18}`} stroke={dark} strokeWidth="1.5" opacity="0.3" />
+        <text x={W / 2} y={by + 38} textAnchor="middle" fontFamily="Caveat" fontSize="30" fontWeight="700" fill={dark} letterSpacing="2">{data.title.toUpperCase()}</text>
+      </g>);
+    })()}
+
+    {/* ── THOUGHT BUBBLE + CHARACTER ── */}
+    {data.subtitle && (() => {
+      const tbX = 80, tbY = bannerH + 10, tbW = Math.min(W * 0.45, 380), tbH = 60;
+      return (<g>
+        {/* Character (thinking pose) */}
+        {GrChar('thinking', 16, bannerH + 14, 0.9, accent, dark)}
+        {/* Thought bubble */}
+        {ThoughtBubble(tbX, tbY, tbW, tbH, dark)}
+        {/* Bubble text */}
+        <text x={tbX + tbW / 2} y={tbY + tbH / 2 + 5} textAnchor="middle" fontFamily="Patrick Hand" fontSize="14" fill={dark} fontStyle="italic">
+          {(data.subtitle || '').slice(0, 50)}
+        </text>
+      </g>);
+    })()}
+
+    {/* ── STEP BOXES ── */}
+    {secs.map((sec, i) => {
+      const col2 = i % cols;
+      const row = Math.floor(i / cols);
+      const sx = 25 + col2 * stepW;
+      const sy = stepsY + row * stepH;
+      const sw = stepW - 10;
+      const sh = stepH - 8;
+      const sRng = mkR(seed + i * 113);
+      const items = (sec.items || []).slice(0, 4);
+
+      return (<g key={i}>
+        {/* Step box */}
+        <path d={rr(sx, sy, sw, sh, 10, sRng, 2.5)} fill="#fff" stroke={dark} strokeWidth="1.8" />
+        {/* Numbered circle */}
+        <circle cx={sx + 22} cy={sy + 22} r="14" fill={accent} stroke={dark} strokeWidth="1.5" />
+        <text x={sx + 22} y={sy + 27} textAnchor="middle" fontFamily="Caveat" fontSize="16" fontWeight="700" fill="#fff">{sec.n}</text>
+        {/* Step title */}
+        <text x={sx + 42} y={sy + 27} fontFamily="Caveat" fontSize="17" fontWeight="700" fill={dark}>{(sec.title || '').slice(0, 22).toUpperCase()}</text>
+        {/* Divider line */}
+        <line x1={sx + 10} y1={sy + 38} x2={sx + sw - 10} y2={sy + 38} stroke={dark} strokeWidth="1" opacity="0.2" />
+        {/* Icon for the step */}
+        {Ic(sec.sym, sx + sw - 44, sy + 4, 34, accent)}
+        {/* Checkbox items */}
+        {items.map((item, j) => {
+          const iy = sy + 50 + j * 22;
+          const txt = item.startsWith('[X] ') ? item.slice(4) : item;
+          return (<g key={j}>
+            {/* Checkbox square */}
+            <rect x={sx + 14} y={iy - 8} width="12" height="12" rx="2" fill="none" stroke={dark} strokeWidth="1.5" />
+            {/* Checkmark in accent color */}
+            <path d={`M${sx + 16},${iy - 2} L${sx + 19},${iy + 2} L${sx + 25},${iy - 6}`} fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
+            <text x={sx + 32} y={iy + 2} fontFamily="Patrick Hand" fontSize="13" fill={dark}>{txt.slice(0, 28)}</text>
+          </g>);
+        })}
+
+        {/* Arrow to next step */}
+        {i < secs.length - 1 && (() => {
+          const nextCol = (i + 1) % cols;
+          const nextRow = Math.floor((i + 1) / cols);
+          if (nextRow === row) {
+            // Horizontal arrow
+            const ax = sx + sw + 2, ay = sy + sh / 2;
+            return (<g opacity="0.6">
+              <line x1={ax} y1={ay} x2={ax + 8} y2={ay} stroke={accent} strokeWidth="3" strokeLinecap="round" />
+              <path d={`M${ax + 4},${ay - 5} L${ax + 10},${ay} L${ax + 4},${ay + 5}`} fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+            </g>);
+          } else if (nextCol === 0) {
+            // Down + back arrow
+            const ax = sx + sw / 2, ay = sy + sh + 2;
+            return (<g opacity="0.4">
+              <path d={`M${ax},${ay} L${ax},${ay + 4}`} stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+              <path d={`M${ax - 4},${ay + 1} L${ax},${ay + 5} L${ax + 4},${ay + 1}`} fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" />
+            </g>);
+          }
+          return null;
+        })()}
+      </g>);
+    })}
+
+    {/* ── SUMMARY BOX (Erinnerung) ── */}
+    {data.cm && (() => {
+      const sy2 = H - footerH - summaryH - 10;
+      const sumRng = mkR(seed + 888);
+      return (<g>
+        <path d={rr(25, sy2, W - 50, summaryH - 4, 10, sumRng, 2.5)} fill="#fff" stroke={accent} strokeWidth="2.5" />
+        {/* Star icon */}
+        {Ic('star', 34, sy2 + 6, 24, accent)}
+        <text x={66} y={sy2 + 22} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={accent}>ERINNERUNG</text>
+        <text x={W / 2} y={sy2 + 40} textAnchor="middle" fontFamily="Patrick Hand" fontSize="14" fontWeight="600" fill={dark}>{data.cm}</text>
+      </g>);
+    })()}
+
+    {/* ── FOOTER BAR ── */}
+    {footerH > 0 && (() => {
+      const fy = H - footerH - 4;
+      const fitems = data.footer.items || [];
+      return (<g>
+        <line x1={20} y1={fy} x2={W - 20} y2={fy} stroke={dark} strokeWidth="1" opacity="0.15" />
+        {fitems.map((item, i) => {
+          const fx = 30 + i * ((W - 60) / Math.max(fitems.length, 1));
+          return (<g key={i}>
+            <circle cx={fx} cy={fy + 20} r="3" fill={accent} />
+            <text x={fx + 8} y={fy + 24} fontFamily="Patrick Hand" fontSize="12.5" fill={dark} opacity="0.7">{(item || '').slice(0, 30)}</text>
+          </g>);
+        })}
+      </g>);
+    })()}
+
+    {/* Celebrating character (bottom right) */}
+    {GrChar('celebrating', W - 80, H - 90, 0.7, accent, dark)}
+  </svg>);
+}
+
+/* ═══════════════════════════════════════════
    MAIN WIZARD & UI
    ═══════════════════════════════════════════ */
 
@@ -572,6 +726,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
     if (s.includes('frei') || s.includes('free') || s.includes('свободный')) return 'free';
     if (s.includes('profi') || s.includes('pro') || s.includes('профи') || s.includes('karten') || s.includes('cards') || s.includes('карт')) return 'procards';
     if (s.includes('bild') || s.includes('visual') || s.includes('bold') || s.includes('нагляд')) return 'bildstark';
+    if (s.includes('graphic') || s.includes('recording') || s.includes('графич')) return 'graphicrec';
     return 'structured';
   };
 
@@ -691,7 +846,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
         <p style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginBottom: 12 }}>{t.freeHint}</p>
         <textarea value={ft} onChange={e => setFt(e.target.value)} placeholder={t.freePh} style={{ width: '100%', minHeight: 160, padding: 15, borderRadius: 14, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 15, resize: 'vertical', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box', lineHeight: 1.6 }} />
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {[['structured', t.structured], ['free', t.freeSketch], ['procards', t.proCards], ['bildstark', t.bildstark]].map(([k, la]) => (
+          {[['structured', t.structured], ['free', t.freeSketch], ['procards', t.proCards], ['bildstark', t.bildstark], ['graphicrec', t.graphicRec || '🎬 Graphic Recording']].map(([k, la]) => (
             <button key={k} onClick={() => setFrs(k)} style={{ flex: 1, minWidth: 100, padding: 10, borderRadius: 10, border: frs === k ? '2px solid #3B7DD8' : '2px solid #e0e0e0', background: frs === k ? '#F0F4FF' : '#FAFAFA', fontFamily: 'Caveat,cursive', fontSize: 15, cursor: 'pointer', color: '#2D2D2D' }}>{la}</button>
           ))}
         </div>
@@ -717,7 +872,8 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
   if (ph === 'result' && sn) {
     let svg;
     try {
-      if (rs === 'bildstark') svg = <BildstarkSVG data={sn} pal={pal} />;
+      if (rs === 'graphicrec') svg = <GraphicRecordingSVG data={sn} pal={pal} />;
+      else if (rs === 'bildstark') svg = <BildstarkSVG data={sn} pal={pal} />;
       else if (rs === 'procards') svg = <ProCardSVG data={sn} pal={pal} />;
       else if (rs === 'free') svg = <FreeSVG data={sn} pal={pal} />;
       else svg = <StructSVG data={sn} pal={pal} />;
@@ -731,6 +887,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
       ['free', t.freeL || '🎨'],
       ['procards', t.proL || '🃏'],
       ['bildstark', t.bildL || '🖼️'],
+      ['graphicrec', t.grL || '🎬'],
     ];
 
     if (fs) return (

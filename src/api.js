@@ -32,7 +32,21 @@ export async function callAPI(answers, mode, attempt = 0, lang = 'de', style = '
   const tl = T[lang] || T.de;
   const sceneGuide = 'mountainClimb=Herausforderung,targetHit=Ziel,bridge=Verbindung,seedToTree=Wachstum,lighthouse=Orientierung,teamCircle=Teamwork,ladder=Aufstieg,compass=Richtung,figureThinking=Reflexion,figureCelebrate=Erfolg,doorOpen=Neuanfang,puzzleFit=Zusammenhang,figureHandshake=Vereinbarung,figureConversation=Dialog,figureListening=Zuhören,figureHug=Nähe,figureFear=Angst,figureDoubt=Zweifel,figureBalance=Balance,figureCourage=Mut,windingRoad=Lebensweg,mirrorReflect=Selbstreflexion,scaleBalance=Abwägen,networkNodes=Netzwerk,treasure=Potenzial,wallBreak=Durchbruch';
   const isBs = style === 'bildstark';
-  const base = isBs
+  const isGR = style === 'graphicrec';
+  const base = isGR
+    ? `Graphic Recording Designer. NUR JSON. Professioneller Sketchnote-Stil.
+Symbole:${syL}
+JSON:{"title":"..","subtitle":"Herausforderung/Startproblem als Frage","orientation":"landscape","mood":"neutral","centralMessage":"Kernsatz/Erinnerung","layout":{"columns":3},"sections":[{"number":1,"title":"Schritt-Überschrift max18Z","scene":null,"symbol":"name","color":"primary","items":["[X] Checkbox max25Z","[X] Punkt2"]}],"footer":{"title":"ERINNERUNG","items":["Impuls1","Impuls2","Impuls3"]}}
+WICHTIG für Graphic Recording:
+- subtitle = Gedankenblase: anfängliches Problem/Frage
+- 3-6 Schritte (sections), logischer Ablauf
+- Items als Checkboxen: starte jeden mit [X]
+- Items max 25 Zeichen, max 5 Wörter pro Punkt!
+- centralMessage = wichtigster Kernsatz (Erinnerung/Fazit)
+- footer.items = 2-3 kurze Schlussimpulse
+- Kurz, knapp, stichpunktartig!
+Alle Texte in ${tLang}!`
+    : isBs
     ? `Sketchnote-Designer BILDSTARK. NUR JSON. Szenen:${scL} Symbole:${syL}\nJSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..max40Z","layout":{"columns":4},"sections":[{"number":1,"title":"..","scene":"name","symbol":"name","color":"primary","items":["max12Z"]}],"footer":{"title":"SO GEHT'S","items":["Schritt1","Schritt2"]}}\nJEDE section MUSS scene haben! Items max 12Z, Titel max 16Z, 6-9 Sektionen, einfachste Sprache für Kinder. Alle Texte ${tLang}!`
     : `Sketchnote-Designer Bikablo. NUR JSON. Szenen:${scL} Guide:${sceneGuide} Symbole:${syL}\nJSON:{"title":"..","subtitle":"..","orientation":"landscape","mood":"optimistisch","centralMessage":"..","layout":{"columns":3},"sections":[{"number":1,"title":"..","scene":"name|null","symbol":"name","color":"primary","items":["..max28Z"]}],"footer":{"title":"FAZIT","items":[".."]}}\n7-9 Sektionen,2-3 Punkte(max 28Z!),mind.5 mit scene. Alle Texte ${tLang}!`;
   let sys, usr;
