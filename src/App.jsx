@@ -17,7 +17,7 @@ const T = {
     structured:'📦 Strukturiert', freeSketch:'🎨 Freie Skizze',
     loading:'Sketchnote wird erstellt...', neu:'← Neu', reroll:'🎲 Neu würfeln',
     edit:'📝 Bearbeiten', done:'✓ Fertig', boxes:'📦 Kästchen', freeL:'🎨 Frei',
-    layouts:{structured:'📦 Kästchen',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 KI-Bild'},
+    layouts:{structured:'📦 Kästchen',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 KI-Bild',aisketch:'✏️ KI-Sketch'},
     save:'💾 Speichern', editTitle:'📝 Direkt bearbeiten',
     titleL:'Titel', subtitleL:'Untertitel', centralL:'Zentrale Botschaft',
     noScene:'Kein Bild', primary:'Primär', secondary:'Sekundär', accent:'Akzent',
@@ -45,7 +45,7 @@ const T = {
     structured:'📦 Structured', freeSketch:'🎨 Free Sketch',
     loading:'Creating sketchnote...', neu:'← New', reroll:'🎲 Reroll',
     edit:'📝 Edit', done:'✓ Done', boxes:'📦 Boxes', freeL:'🎨 Free',
-    layouts:{structured:'📦 Boxes',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 AI Image'},
+    layouts:{structured:'📦 Boxes',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 AI Image',aisketch:'✏️ AI Sketch'},
     save:'💾 Save', editTitle:'📝 Edit directly',
     titleL:'Title', subtitleL:'Subtitle', centralL:'Central message',
     noScene:'No image', primary:'Primary', secondary:'Secondary', accent:'Accent',
@@ -73,7 +73,7 @@ const T = {
     structured:'📦 Структура', freeSketch:'🎨 Свободный',
     loading:'Создание скетчноута...', neu:'← Новый', reroll:'🎲 Перегенерировать',
     edit:'📝 Редактировать', done:'✓ Готово', boxes:'📦 Блоки', freeL:'🎨 Свободный',
-    layouts:{structured:'📦 Блоки',journey:'🗺️ Путь',poster:'📰 Постер',flow:'🔄 Поток',aigen:'🎨 ИИ-Арт'},
+    layouts:{structured:'📦 Блоки',journey:'🗺️ Путь',poster:'📰 Постер',flow:'🔄 Поток',aigen:'🎨 ИИ-Арт',aisketch:'✏️ ИИ-Скетч'},
     save:'💾 Сохранить', editTitle:'📝 Прямое редактирование',
     titleL:'Заголовок', subtitleL:'Подзаголовок', centralL:'Главное сообщение',
     noScene:'Без картинки', primary:'Основной', secondary:'Вторичный', accent:'Акцент',
@@ -161,6 +161,79 @@ function ImageLayout({ data, pal }) {
         style={{ position: 'absolute', top: 12, right: 12, padding: '6px 14px', borderRadius: 8, border: 'none',
           background: 'rgba(255,255,255,0.92)', color: '#E8584F', fontFamily: 'Caveat, cursive', fontSize: 14,
           cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>🎲 Neu zeichnen</button>
+    </div>
+  );
+
+  return null;
+}
+
+/* ═══ CLAUDE SVG SKETCH LAYOUT ═══ */
+const SVG_SYSTEM = `Du bist ein Sketchnote-Designer. Generiere ein SVG im Bikablo-Stil.
+REGELN: viewBox="0 0 1100 780". Schriften: Caveat (Titel, 700), Patrick Hand (Text). Importiere: @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap'). Akzent: #E8584F. Text: #2D2D2D. Hintergrund: weiß.
+Figuren: Runde Köpfe (circle r=12-14), Punkte für Augen, Kurve für Mund, Haare als path, Körper als Linien (stroke-width=2), expressive Posen. Deko: Pfeile, Herzen, Sterne, Sprechblasen, Banner.
+LAYOUT: 1) Großer Titel oben im farbigen Banner. 2) 4-6 nummerierte Sektionen mit Illustration + Stichpunkten. 3) Werkzeugkasten/Erinnerung unten. 4) Zentrale Botschaft.
+WICHTIG: NUR SVG-Code, kein Markdown. Beginne mit <svg, ende mit </svg>. Alle Texte Deutsch. Mindestens 4 verschiedene Figuren.`;
+
+function SketchLayout({ data, pal }) {
+  const [svgCode, setSvgCode] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+  const dataKey = React.useRef('');
+
+  const generate = React.useCallback(async () => {
+    setLoading(true); setErr(null);
+    try {
+      const secText = (data.sections || []).map((s, i) =>
+        `${i + 1}. "${s.title}" — ${(s.items || []).join(', ')}`
+      ).join('\n');
+      const userPrompt = `Sketchnote: "${data.title}"${data.subtitle ? ` (${data.subtitle})` : ''}\n\nSektionen:\n${secText}\n${data.cm ? `\nBotschaft: ${data.cm}` : ''}${data.footer?.title ? `\nFooter: ${data.footer.title}: ${(data.footer.items||[]).join(', ')}` : ''}\nStimmung: ${data.mood || 'optimistisch'}`;
+
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 12000,
+          system: SVG_SYSTEM,
+          messages: [{ role: 'user', content: userPrompt }],
+        }),
+      });
+      if (!res.ok) throw new Error(`API-Fehler: HTTP ${res.status}`);
+      const json = await res.json();
+      const text = json.content?.[0]?.text || '';
+      const match = text.match(/<svg[\s\S]*<\/svg>/);
+      if (!match) throw new Error('Kein SVG in der Antwort');
+      setSvgCode(match[0]);
+    } catch (e) { setErr(e.message || 'SVG-Generierung fehlgeschlagen'); }
+    finally { setLoading(false); }
+  }, [data]);
+
+  React.useEffect(() => {
+    const key = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
+    if (key !== dataKey.current) { dataKey.current = key; generate(); }
+  }, [data, generate]);
+
+  if (loading) return (
+    <div style={{ width: '100%', aspectRatio: '1100/780', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
+      <div style={{ fontSize: 48, animation: 'spin 1.5s linear infinite' }}>✏️</div>
+      <p style={{ fontFamily: 'Caveat, cursive', fontSize: 22, color: '#E8584F', marginTop: 16 }}>Claude zeichnet dein Sketchnote...</p>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 14, color: '#888' }}>Einzigartige Illustrationen + perfekter Text · ~10-15 Sek.</p>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (err) return (
+    <div style={{ width: '100%', aspectRatio: '1100/780', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 16, color: '#E8584F', maxWidth: 400, textAlign: 'center' }}>⚠ {err}</p>
+      <button onClick={generate} style={{ marginTop: 12, padding: '8px 24px', borderRadius: 10, border: 'none', background: '#E8584F', color: '#fff', fontFamily: 'Caveat, cursive', fontSize: 16, cursor: 'pointer' }}>🔄 Erneut versuchen</button>
+    </div>
+  );
+
+  if (svgCode) return (
+    <div style={{ position: 'relative' }}>
+      <div id="sketchnote-svg-container" dangerouslySetInnerHTML={{ __html: svgCode.replace('<svg', '<svg id="sketchnote-svg" style="width:100%;height:100%;border-radius:12px"') }}/>
+      <button onClick={generate} style={{ position: 'absolute', top: 12, right: 12, padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.92)', color: '#E8584F', fontFamily: 'Caveat, cursive', fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>🎲 Neu zeichnen</button>
     </div>
   );
 
@@ -309,6 +382,7 @@ export default function App(){
   if(ph==='result'&&sn){
     let svg;
     if(rs==='aigen'){svg=<ImageLayout data={sn} pal={pal}/>;}
+    else if(rs==='aisketch'){svg=<SketchLayout data={sn} pal={pal}/>;}
     else{try{const L={structured:StructSVG,journey:JourneySVG,poster:PosterSVG,flow:FlowSVG};const Comp=L[rs]||StructSVG;svg=<Comp data={sn} pal={pal}/>;}
     catch(e){svg=<div style={{padding:20,color:'#E8584F'}}>Error: {e.message}</div>;}}
     const eS={width:'100%',padding:'8px 10px',borderRadius:8,border:'2px solid #e0e0e0',fontFamily:'Patrick Hand,cursive',fontSize:14,outline:'none',boxSizing:'border-box',background:'#FAFAFA'};
