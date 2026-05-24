@@ -92,17 +92,17 @@ const T = {
   },
 };
 
-/* ═══ AI HYBRID LAYOUT ═══ */
+/* ═══ AI IMAGE LAYOUT (DALL-E 3 via Worker) ═══ */
 const IMAGE_WORKER_URL = 'https://sketchnote-image.rsab1963.workers.dev';
 
 function ImageLayout({ data, pal }) {
-  const [imgB64, setImgB64] = React.useState(null);
+  const [imgSrc, setImgSrc] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState(null);
   const dataKey = React.useRef('');
 
   const generate = React.useCallback(async () => {
-    setLoading(true); setErr(null);
+    setLoading(true); setErr(null); setImgSrc(null);
     try {
       const res = await fetch(IMAGE_WORKER_URL, {
         method: 'POST',
@@ -113,12 +113,22 @@ function ImageLayout({ data, pal }) {
           footer: data.footer, cm: data.cm,
         }),
       });
+
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const errJson = await res.json();
+        throw new Error(errJson.detail || errJson.error || 'Unbekannter Fehler');
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       const blob = await res.blob();
       const reader = new FileReader();
-      reader.onloadend = () => setImgB64(reader.result);
+      reader.onloadend = () => {
+        if (reader.result) setImgSrc(reader.result);
+        else setErr('Bild konnte nicht geladen werden');
+      };
       reader.readAsDataURL(blob);
-    } catch (e) { setErr(e.message || 'Fehler bei Bildgenerierung'); }
+    } catch (e) { setErr(e.message || 'Bildgenerierung fehlgeschlagen'); }
     finally { setLoading(false); }
   }, [data]);
 
@@ -127,108 +137,34 @@ function ImageLayout({ data, pal }) {
     if (key !== dataKey.current) { dataKey.current = key; generate(); }
   }, [data, generate]);
 
-  const W = 1100, H = 780;
-  const secs = (data.sections || []).slice(0, 6);
-  const M = 22;
-
   if (loading) return (
-    <div style={{ width: '100%', aspectRatio: '1100/780', background: pal.bg, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: '100%', aspectRatio: '1792/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
       <div style={{ fontSize: 48, animation: 'spin 1.5s linear infinite' }}>🎨</div>
-      <p style={{ fontFamily: 'Caveat, cursive', fontSize: 20, color: pal.p, marginTop: 16 }}>KI-Sketchnote wird generiert...</p>
-      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 14, color: pal.t, opacity: 0.5 }}>flux-1-schnell · ~5-10 Sekunden</p>
+      <p style={{ fontFamily: 'Caveat, cursive', fontSize: 22, color: '#E8584F', marginTop: 16 }}>DALL·E 3 zeichnet dein Sketchnote...</p>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 14, color: '#888' }}>Professionelle Illustration mit lesbarem Text · ~15-20 Sek.</p>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   if (err) return (
-    <div style={{ width: '100%', aspectRatio: '1100/780', background: pal.bg, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 16, color: '#E8584F' }}>⚠ {err}</p>
-      <button onClick={generate} style={{ marginTop: 12, padding: '8px 24px', borderRadius: 10, border: 'none', background: pal.p, color: '#fff', fontFamily: 'Caveat, cursive', fontSize: 16, cursor: 'pointer' }}>🔄 Erneut versuchen</button>
+    <div style={{ width: '100%', aspectRatio: '1792/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 16, color: '#E8584F', maxWidth: 400, textAlign: 'center' }}>⚠ {err}</p>
+      <button onClick={generate} style={{ marginTop: 12, padding: '8px 24px', borderRadius: 10, border: 'none', background: '#E8584F', color: '#fff', fontFamily: 'Caveat, cursive', fontSize: 16, cursor: 'pointer' }}>🔄 Erneut versuchen</button>
     </div>
   );
 
-  // Hybrid SVG: AI image as background + text overlay
-  const cols = Math.min(secs.length, 3);
-  const rows = Math.ceil(secs.length / cols);
-  const secW = (W - M * 2 - 20) / cols;
-  const TH = 90;
-  const fH = data.footer?.items?.length ? 60 : 0;
-  const cmH = data.cm ? 36 : 0;
-  const secH = (H - TH - fH - cmH - M * 2 - 10) / Math.max(rows, 1);
-
-  return (
-    <svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', borderRadius: 12 }}>
-      <defs><style>{FC}</style></defs>
-      <rect width={W} height={H} fill={pal.bg} rx="10"/>
-
-      {/* AI-generated illustration as background at reduced opacity */}
-      {imgB64 && <image href={imgB64} x="0" y="0" width={W} height={H} opacity="0.18" preserveAspectRatio="xMidYMid slice"/>}
-
-      {/* Semi-transparent overlay for readability */}
-      <rect width={W} height={H} fill={pal.bg} opacity="0.55" rx="10"/>
-
-      {/* Title banner */}
-      <rect x={W/2-240} y={12} width={480} height={48} rx={10} fill={pal.p} opacity="0.92"/>
-      <text x={W/2} y={44} textAnchor="middle" fontFamily="Caveat" fontSize="28" fontWeight="700" fill="#fff" letterSpacing="1">{data.title.toUpperCase()}</text>
-      {data.subtitle && <text x={W/2} y={74} textAnchor="middle" fontFamily="Patrick Hand" fontSize="15" fill={pal.t} opacity="0.7">{data.subtitle}</text>}
-
-      {/* Sections with white backing */}
-      {secs.map((sec, i) => {
-        const col = gc(pal, sec.color);
-        const cx = M + 10 + (i % cols) * secW;
-        const cy = TH + Math.floor(i / cols) * secH;
-        const items = (sec.items || []).slice(0, 4).map(t => t.length > 34 ? t.slice(0, 32) + '…' : t);
-        return (
-          <g key={i}>
-            {/* White backing for readability */}
-            <rect x={cx} y={cy} width={secW - 12} height={secH - 10} rx={10} fill="#fff" opacity="0.82"/>
-            <rect x={cx} y={cy} width={secW - 12} height={secH - 10} rx={10} fill="none" stroke={col} strokeWidth="1.5" opacity="0.4"/>
-
-            {/* Section number + title */}
-            <circle cx={cx + 18} cy={cy + 20} r={12} fill={col} opacity="0.9"/>
-            <text x={cx + 18} y={cy + 25} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="700" fill="#fff">{sec.n}</text>
-            <text x={cx + 36} y={cy + 25} fontFamily="Caveat" fontSize="16" fontWeight="700" fill={pal.t}>{(sec.title || '').toUpperCase()}</text>
-
-            {/* Divider */}
-            <line x1={cx + 8} y1={cy + 34} x2={cx + secW - 20} y2={cy + 34} stroke={col} strokeWidth="1.2" opacity="0.25"/>
-
-            {/* Bullet items */}
-            {items.map((item, j) => (
-              <g key={j}>
-                <circle cx={cx + 14} cy={cy + 50 + j * 20} r={2.5} fill={col} opacity="0.6"/>
-                <text x={cx + 22} y={cy + 54 + j * 20} fontFamily="Patrick Hand" fontSize="13" fill={pal.t}>{item}</text>
-              </g>
-            ))}
-          </g>
-        );
-      })}
-
-      {/* Central message */}
-      {data.cm && (
-        <g>
-          <rect x={W/2-210} y={H-fH-M-cmH-4} width={420} height={30} rx={15} fill="#fff" opacity="0.9"/>
-          <rect x={W/2-210} y={H-fH-M-cmH-4} width={420} height={30} rx={15} fill="none" stroke={pal.p} strokeWidth="1.2"/>
-          <text x={W/2} y={H-fH-M-cmH+16} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} fontStyle="italic">★ {data.cm}</text>
-        </g>
-      )}
-
-      {/* Footer */}
-      {fH > 0 && (
-        <g>
-          <rect x={M} y={H-fH-M+6} width={W-M*2} height={fH-6} rx={10} fill="#fff" opacity="0.8"/>
-          <rect x={M} y={H-fH-M+6} width={W-M*2} height={fH-6} rx={10} fill="none" stroke={pal.p} strokeWidth="1.2" strokeDasharray="6,4"/>
-          {data.footer.title && <text x={W/2} y={H-fH-M+22} textAnchor="middle" fontFamily="Caveat" fontSize="13" fontWeight="700" fill={pal.p}>{data.footer.title.toUpperCase()}</text>}
-          {data.footer.items.map((it, i) => {
-            const ix = M + 20 + i * ((W - M * 2 - 40) / Math.max(data.footer.items.length, 1));
-            return <text key={i} x={ix} y={H-fH-M+42} fontFamily="Patrick Hand" fontSize="12" fill={pal.t}>❤ {it}</text>;
-          })}
-        </g>
-      )}
-
-      {/* Regenerate hint */}
-      <text x={W-M} y={H-8} textAnchor="end" fontFamily="Patrick Hand" fontSize="10" fill={pal.t} opacity="0.3">KI-Illustration · flux-1-schnell</text>
-    </svg>
+  if (imgSrc) return (
+    <div style={{ position: 'relative' }}>
+      <img id="sketchnote-ai-img" src={imgSrc} alt={data.title}
+        style={{ display: 'block', width: '100%', borderRadius: 12, border: '2px solid #f0e0d8' }}/>
+      <button onClick={generate}
+        style={{ position: 'absolute', top: 12, right: 12, padding: '6px 14px', borderRadius: 8, border: 'none',
+          background: 'rgba(255,255,255,0.92)', color: '#E8584F', fontFamily: 'Caveat, cursive', fontSize: 14,
+          cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>🎲 Neu zeichnen</button>
+    </div>
   );
+
+  return null;
 }
 
 function vd(d){
@@ -394,8 +330,8 @@ export default function App(){
           <button onClick={()=>setEd(e=>!e)} style={bt(ed?'#E8584F':'#7B68AE',ed)}>{ed?t.done:t.edit}</button>
           {Object.entries(t.layouts||{}).map(([k,la])=>(<button key={k} onClick={()=>setRs(k)} style={{...bt(rs===k?'#3B7DD8':'#999',rs===k),fontSize:14,padding:'7px 12px'}}>{la}</button>))}
           <button onClick={()=>setFs(true)} style={bt('#555',false)}>{t.fullscreen}</button>
-          <button onClick={()=>dlS(sn.title)} style={bt('#2E86AB',false)}>SVG</button>
-          <button onClick={()=>dlP(sn.title,pal)} style={bt('#4CAF50',false)}>PNG</button>
+          {rs!=='aigen'&&<button onClick={()=>dlS(sn.title)} style={bt('#2E86AB',false)}>SVG</button>}
+          <button onClick={()=>{if(rs==='aigen'){const im=document.getElementById('sketchnote-ai-img');if(!im||!im.src)return;const a=Object.assign(document.createElement('a'),{href:im.src,download:`sn-${sl(sn.title)}.png`});document.body.appendChild(a);a.click();document.body.removeChild(a);}else dlP(sn.title,pal);}} style={bt('#4CAF50',false)}>PNG</button>
           <button onClick={()=>dlJ(ans,sn,mode,rs)} style={bt('#F5A623',false)}>{t.save}</button>
         </div>
         <div style={{maxWidth:1100,margin:'0 auto',boxShadow:'0 6px 28px rgba(0,0,0,.1)',borderRadius:12,overflow:'auto',WebkitOverflowScrolling:'touch'}}>{svg}</div>
