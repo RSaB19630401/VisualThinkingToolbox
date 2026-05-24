@@ -153,8 +153,8 @@ function ImageLayout({ data, pal }) {
   );
 
   if (img) return (
-    <div style={{ ...containerStyle, aspectRatio: 'auto' }}>
-      <img id="sketchnote-ai-img" src={img} alt={data.title} style={{ width: '100%', borderRadius: 12 }}/>
+    <div style={{ width: '100%', background: pal.bg, borderRadius: 12, position: 'relative', border: '2px solid #e0e0e0' }}>
+      <img id="sketchnote-ai-img" src={img} alt={data.title} style={{ display: 'block', width: '100%', borderRadius: 12 }}/>
       <button onClick={generate} style={{ position: 'absolute', top: 12, right: 12, padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.9)', color: pal.p, fontFamily: 'Caveat, cursive', fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>🎲 Neues Bild</button>
     </div>
   );
