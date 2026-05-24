@@ -17,7 +17,7 @@ const T = {
     structured:'📦 Strukturiert', freeSketch:'🎨 Freie Skizze',
     loading:'Sketchnote wird erstellt...', neu:'← Neu', reroll:'🎲 Neu würfeln',
     edit:'📝 Bearbeiten', done:'✓ Fertig', boxes:'📦 Kästchen', freeL:'🎨 Frei',
-    layouts:{structured:'📦 Kästchen',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow'},
+    layouts:{structured:'📦 Kästchen',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 KI-Bild'},
     save:'💾 Speichern', editTitle:'📝 Direkt bearbeiten',
     titleL:'Titel', subtitleL:'Untertitel', centralL:'Zentrale Botschaft',
     noScene:'Kein Bild', primary:'Primär', secondary:'Sekundär', accent:'Akzent',
@@ -45,7 +45,7 @@ const T = {
     structured:'📦 Structured', freeSketch:'🎨 Free Sketch',
     loading:'Creating sketchnote...', neu:'← New', reroll:'🎲 Reroll',
     edit:'📝 Edit', done:'✓ Done', boxes:'📦 Boxes', freeL:'🎨 Free',
-    layouts:{structured:'📦 Boxes',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow'},
+    layouts:{structured:'📦 Boxes',journey:'🗺️ Journey',poster:'📰 Poster',flow:'🔄 Flow',aigen:'🎨 AI Image'},
     save:'💾 Save', editTitle:'📝 Edit directly',
     titleL:'Title', subtitleL:'Subtitle', centralL:'Central message',
     noScene:'No image', primary:'Primary', secondary:'Secondary', accent:'Accent',
@@ -73,7 +73,7 @@ const T = {
     structured:'📦 Структура', freeSketch:'🎨 Свободный',
     loading:'Создание скетчноута...', neu:'← Новый', reroll:'🎲 Перегенерировать',
     edit:'📝 Редактировать', done:'✓ Готово', boxes:'📦 Блоки', freeL:'🎨 Свободный',
-    layouts:{structured:'📦 Блоки',journey:'🗺️ Путь',poster:'📰 Постер',flow:'🔄 Поток'},
+    layouts:{structured:'📦 Блоки',journey:'🗺️ Путь',poster:'📰 Постер',flow:'🔄 Поток',aigen:'🎨 ИИ-Арт'},
     save:'💾 Сохранить', editTitle:'📝 Прямое редактирование',
     titleL:'Заголовок', subtitleL:'Подзаголовок', centralL:'Главное сообщение',
     noScene:'Без картинки', primary:'Основной', secondary:'Вторичный', accent:'Акцент',
@@ -91,6 +91,76 @@ const T = {
     apiLang:'Russian',
   },
 };
+
+/* ═══ AI IMAGE LAYOUT ═══ */
+// WICHTIG: Nach dem Deployment des Workers die URL hier eintragen!
+const IMAGE_WORKER_URL = 'https://sketchnote-image.rsab1963.workers.dev';
+
+function ImageLayout({ data, pal }) {
+  const [img, setImg] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+  const dataKey = React.useRef('');
+
+  const generate = React.useCallback(async () => {
+    setLoading(true); setErr(null);
+    try {
+      const res = await fetch(IMAGE_WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title, subtitle: data.subtitle, mood: data.mood,
+          sections: (data.sections || []).map(s => ({ title: s.title, scene: s.scene, items: s.items })),
+          footer: data.footer, cm: data.cm,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setImg(url);
+    } catch (e) { setErr(e.message || 'Fehler bei Bildgenerierung'); }
+    finally { setLoading(false); }
+  }, [data]);
+
+  // Auto-generate on first mount or data change
+  React.useEffect(() => {
+    const key = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
+    if (key !== dataKey.current) { dataKey.current = key; generate(); }
+  }, [data, generate]);
+
+  const la = data.orientation !== 'portrait';
+  const containerStyle = {
+    width: '100%', aspectRatio: '1/1', background: pal.bg, borderRadius: 12,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    position: 'relative', overflow: 'hidden',
+  };
+
+  if (loading) return (
+    <div style={containerStyle}>
+      <div style={{ fontSize: 48, animation: 'spin 1.5s linear infinite' }}>🎨</div>
+      <p style={{ fontFamily: 'Caveat, cursive', fontSize: 20, color: pal.p, marginTop: 16 }}>KI-Sketchnote wird generiert...</p>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 14, color: pal.t, opacity: 0.5 }}>flux-1-schnell · ~5-10 Sekunden</p>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (err) return (
+    <div style={containerStyle}>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 16, color: '#E8584F' }}>⚠ {err}</p>
+      <button onClick={generate} style={{ marginTop: 12, padding: '8px 24px', borderRadius: 10, border: 'none', background: pal.p, color: '#fff', fontFamily: 'Caveat, cursive', fontSize: 16, cursor: 'pointer' }}>🔄 Erneut versuchen</button>
+      <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 12, color: pal.t, opacity: 0.4, marginTop: 8 }}>Worker-URL: {IMAGE_WORKER_URL}</p>
+    </div>
+  );
+
+  if (img) return (
+    <div style={{ ...containerStyle, aspectRatio: 'auto' }}>
+      <img id="sketchnote-ai-img" src={img} alt={data.title} style={{ width: '100%', borderRadius: 12 }}/>
+      <button onClick={generate} style={{ position: 'absolute', top: 12, right: 12, padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.9)', color: pal.p, fontFamily: 'Caveat, cursive', fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>🎲 Neues Bild</button>
+    </div>
+  );
+
+  return <div style={containerStyle}><p style={{ color: pal.t, opacity: 0.5 }}>Bereit.</p></div>;
+}
 
 function vd(d){
   if(!d||typeof d!=='object')throw new Error('Ungültig');
@@ -233,8 +303,9 @@ export default function App(){
 
   if(ph==='result'&&sn){
     let svg;
-    try{const L={structured:StructSVG,journey:JourneySVG,poster:PosterSVG,flow:FlowSVG};const Comp=L[rs]||StructSVG;svg=<Comp data={sn} pal={pal}/>;}
-    catch(e){svg=<div style={{padding:20,color:'#E8584F'}}>Error: {e.message}</div>;}
+    if(rs==='aigen'){svg=<ImageLayout data={sn} pal={pal}/>;}
+    else{try{const L={structured:StructSVG,journey:JourneySVG,poster:PosterSVG,flow:FlowSVG};const Comp=L[rs]||StructSVG;svg=<Comp data={sn} pal={pal}/>;}
+    catch(e){svg=<div style={{padding:20,color:'#E8584F'}}>Error: {e.message}</div>;}}
     const eS={width:'100%',padding:'8px 10px',borderRadius:8,border:'2px solid #e0e0e0',fontFamily:'Patrick Hand,cursive',fontSize:14,outline:'none',boxSizing:'border-box',background:'#FAFAFA'};
 
     if(fs) return(<div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'#fff',zIndex:9999,overflow:'auto',WebkitOverflowScrolling:'touch'}}>
@@ -251,11 +322,11 @@ export default function App(){
         <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',justifyContent:'center'}}>
           <button onClick={()=>{setPh('mode');setMode(null);setAns({});setSn(null);setErr(null);setEd(false);}} style={bt('#888',false)}>{t.neu}</button>
           <button onClick={()=>gen(ans,mode)} style={bt('#E8584F',false)}>{t.reroll}</button>
-          <button onClick={()=>setEd(e=>!e)} style={bt(ed?'#E8584F':'#7B68AE',ed)}>{ed?t.done:t.edit}</button>
+          {rs!=='aigen'&&<button onClick={()=>setEd(e=>!e)} style={bt(ed?'#E8584F':'#7B68AE',ed)}>{ed?t.done:t.edit}</button>}
           {Object.entries(t.layouts||{}).map(([k,la])=>(<button key={k} onClick={()=>setRs(k)} style={{...bt(rs===k?'#3B7DD8':'#999',rs===k),fontSize:14,padding:'7px 12px'}}>{la}</button>))}
           <button onClick={()=>setFs(true)} style={bt('#555',false)}>{t.fullscreen}</button>
-          <button onClick={()=>dlS(sn.title)} style={bt('#2E86AB',false)}>SVG</button>
-          <button onClick={()=>dlP(sn.title,pal)} style={bt('#4CAF50',false)}>PNG</button>
+          {rs!=='aigen'&&<button onClick={()=>dlS(sn.title)} style={bt('#2E86AB',false)}>SVG</button>}
+          <button onClick={()=>{if(rs==='aigen'){const im=document.getElementById('sketchnote-ai-img');if(!im)return;fetch(im.src).then(r=>r.blob()).then(b=>dlB(b,`sn-${sl(sn.title)}.png`));}else dlP(sn.title,pal);}} style={bt('#4CAF50',false)}>PNG</button>
           <button onClick={()=>dlJ(ans,sn,mode,rs)} style={bt('#F5A623',false)}>{t.save}</button>
         </div>
         <div style={{maxWidth:1100,margin:'0 auto',boxShadow:'0 6px 28px rgba(0,0,0,.1)',borderRadius:12,overflow:'auto',WebkitOverflowScrolling:'touch'}}>{svg}</div>
