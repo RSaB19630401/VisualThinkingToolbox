@@ -1,5 +1,6 @@
-// downloads.js — Export as SVG, PNG, JSON
+// downloads.js — Export sketchnotes as SVG, PNG, or JSON project files
 
+/** Trigger a browser download from a Blob */
 function dlB(b, n) {
   const u = URL.createObjectURL(b);
   const a = Object.assign(document.createElement('a'), { href: u, download: n });
@@ -9,10 +10,12 @@ function dlB(b, n) {
   setTimeout(() => URL.revokeObjectURL(u), 1000);
 }
 
+/** Slugify a title for filenames */
 function sl(t) {
   return (t || 'x').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
 }
 
+/** Download the current sketchnote as SVG */
 export function dlS(t) {
   const el = document.getElementById('sketchnote-svg');
   if (!el) return;
@@ -24,6 +27,7 @@ export function dlS(t) {
   );
 }
 
+/** Download the current sketchnote as PNG (2× resolution) */
 export function dlP(t, p) {
   const el = document.getElementById('sketchnote-svg');
   if (!el) return;
@@ -44,12 +48,10 @@ export function dlP(t, p) {
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(s)));
 }
 
-export function dlJ(a, d, m, r, baseColor) {
+/** Download the current project state as JSON (for later re-import) */
+export function dlJ(a, d, m, r) {
   dlB(
-    new Blob(
-      [JSON.stringify({ v: 8, mode: m, rs: r, baseColor: baseColor || null, answers: a, data: d, at: new Date().toISOString() }, null, 2)],
-      { type: 'application/json' }
-    ),
+    new Blob([JSON.stringify({ v: 7, mode: m, rs: r, answers: a, data: d, at: new Date().toISOString() }, null, 2)], { type: 'application/json' }),
     `sn-${sl(d?.title)}.json`
   );
 }

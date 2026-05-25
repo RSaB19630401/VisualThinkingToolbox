@@ -1,7 +1,13 @@
-import React from "react";
-import Sc from "./Scenes.jsx";
-import Ic from "./Icons.jsx";
-import { FC, mkR, rr, ln, arr, gc } from "./helpers.js";
+// Layouts.jsx — 4 SVG Layout Components for Sketchnote Tool
+// StructSVG (Kästchen), JourneySVG, PosterSVG, FlowSVG
+import React from 'react';
+import { FONT_CSS, mkR, rr, ln, arr } from './primitives.js';
+import { Sc } from './scenes.jsx';
+import { Ic } from './icons.jsx';
+import { gc } from './palettes.js';
+
+const FC = FONT_CSS;
+
 
 /* ═══════════════════════════════════════════════════
    LAYOUT 1: KÄSTCHEN (Structured Grid)
