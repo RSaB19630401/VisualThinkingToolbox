@@ -292,7 +292,7 @@ function dlJ(a,d,m,r){dlB(new Blob([JSON.stringify({v:7,mode:m,rs:r,answers:a,da
 const bt=(c,f)=>({padding:'9px 16px',borderRadius:10,border:f?'none':`2px solid ${c}`,background:f?c:'#fff',color:f?'#fff':c,fontFamily:'Caveat,cursive',fontSize:16,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'});
 
 
-export default function App(){
+export default function App({ onBack }){
   const[ph,setPh]=useState('mode');
   const[mode,setMode]=useState(null);
   const[ans,setAns]=useState({});
@@ -323,7 +323,7 @@ export default function App(){
   },[lang,t]);
 
   const langBar=(<div style={{display:'flex',gap:4,justifyContent:'center',marginBottom:6}}>{[['de','\u{1F1E9}\u{1F1EA}'],['en','\u{1F1EC}\u{1F1E7}'],['ru','\u{1F1F7}\u{1F1FA}']].map(([k,fl])=>(<button key={k} onClick={()=>setLang(k)} style={{padding:'4px 10px',borderRadius:8,border:lang===k?'2px solid #E8584F':'2px solid transparent',background:lang===k?'#FFF5F0':'transparent',fontSize:16,cursor:'pointer'}}>{fl}</button>))}</div>);
-  const hdr=(<div style={{textAlign:'center',padding:'16px 16px 3px'}}><h1 style={{fontFamily:'Caveat,cursive',fontSize:30,fontWeight:700,color:'#2D2D2D',margin:0}}>{'\u270F\uFE0F'} {t.title}</h1><p style={{fontFamily:'Patrick Hand,cursive',fontSize:13,color:'#aaa',marginTop:2}}>{t.sub}</p>{langBar}</div>);
+  const hdr=(<div style={{textAlign:'center',padding:'16px 16px 3px',position:'relative'}}>{onBack&&<button onClick={onBack} style={{position:'absolute',left:16,top:16,padding:'8px 16px',borderRadius:10,border:'2px solid #E8584F',background:'#fff',color:'#E8584F',fontFamily:'Caveat,cursive',fontSize:15,cursor:'pointer',fontWeight:600}}>← Toolbox</button>}<h1 style={{fontFamily:'Caveat,cursive',fontSize:30,fontWeight:700,color:'#2D2D2D',margin:0}}>{'\u270F\uFE0F'} {t.title}</h1><p style={{fontFamily:'Patrick Hand,cursive',fontSize:13,color:'#aaa',marginTop:2}}>{t.sub}</p>{langBar}</div>);
   const errBox=err?(<div style={{maxWidth:500,margin:'0 auto 8px',padding:'10px 16px',background:'#FFF0F0',border:'2px solid #E8584F',borderRadius:10,textAlign:'center',fontFamily:'Patrick Hand,cursive',fontSize:14,color:'#E8584F'}}>{err}<button onClick={()=>setErr(null)} style={{marginLeft:12,background:'none',border:'none',color:'#E8584F',cursor:'pointer',fontSize:16}}>x</button></div>):null;
 
   if(ph==='mode') return(<div style={{minHeight:'100vh',background:'linear-gradient(145deg,#FEFCFB,#F5F0EB)'}}>
