@@ -1,71 +1,57 @@
 # 🎨 Visual Thinking Toolbox
 
-KI-gestützte Visual Thinking Tools — modular aufgebaut, erweiterbar.
+KI-gestützte visuelle Denkwerkzeuge. Erstellt aus Textbeschreibungen Sketchnotes, Mind Maps, Vergleichsbilder und Wertequadrate.
 
-## Modulare Struktur
+## 4 Werkzeuge
+
+### ✏️ Sketchnote Visualizer
+4 Darstellungsstile: Strukturiert, Freie Skizze, Profi-Karten, Bildstark. Bikablo-Szenen und Icons, geführter Wizard oder freie Eingabe.
+
+### 🧠 Mind Map
+Zentrales Thema → KI generiert Äste + Unteräste → radialer SVG-Baum → manuell bearbeitbar.
+
+### ⚖️ Vergleichsbild
+4 Layouts wählbar: 2 Spalten, 3 Spalten, 4 Spalten, Venn-Diagramm. KI füllt Inhalte, danach editierbar.
+
+### ◈ Wertequadrat
+Nach Schulz von Thun. 3 Varianten: Klassisch (2×2), mit Dialektik-Pfeilen, Einfach + Leitfrage.
+
+## Features
+
+- **Farbpalette-Karten** — 8 Stimmungspaletten ("Warm & Mutig", "Ruhig & Klar" etc.) + eigene Farbe
+- **Grundfarbe initial wählbar**, später änderbar, stimmungsbasierte Vorschläge
+- **Tool-Auswahl als Startseite** mit Kacheln
+- **KI-Generierung + manuelle Bearbeitung** bei allen Tools
+- **Export** — SVG, PNG, Projekt-JSON
+- **3 Sprachen** — DE, EN, RU
+
+## Architektur
 
 ```
 src/
-├── App.jsx              ← Tool-Router (Hub/Startseite)
-├── SketchnoteTool.jsx   ← Sketchnote Generator (Haupttool)
-├── primitives.js        ← SVG-Zeichenhelfer (hand-drawn Stil)
-├── scenes.js            ← 26 Bikablo-Szenen
-├── icons.js             ← 23 Icon-Symbole
-├── palettes.js          ← 5 Stimmungs-Farbpaletten
-├── translations.js      ← i18n (DE/EN/RU)
-├── api.js               ← Claude API-Kommunikation
-├── downloads.js         ← SVG/PNG/JSON-Export
-├── validate.js          ← Datenvalidierung
-└── main.jsx             ← React Entry Point
+├── main.jsx              # Entry
+├── App.jsx               # Router + Landing Page + shared state
+├── ColorChooser.jsx      # Palette-Karten-Selector
+├── SketchnoteTool.jsx    # Sketchnote (4 Stile)
+├── MindMapTool.jsx       # Mind Map
+├── ComparisonTool.jsx    # Vergleichsbild (4 Layouts)
+├── ValuesSquareTool.jsx  # Wertequadrat (3 Varianten)
+├── primitives.js         # SVG-Zeichenhilfen
+├── scenes.jsx            # 26 Bikablo-Szenen
+├── icons.jsx             # 23 Icons
+├── palettes.js           # Paletten + Palette-Cards + Farbableitung
+├── translations.js       # DE/EN/RU
+├── api.js                # API-Aufrufe für alle 4 Tools
+├── downloads.js          # SVG/PNG/JSON Export
+└── validate.js           # Response-Validierung
 ```
 
-## Features (v2.0)
+## Deployment
 
-- ✅ KI-generierte Bikablo-Sketchnotes (Claude API)
-- ✅ 26 Szenen + 23 Icons
-- ✅ Zwei Layouts: Kästchen (Strukturiert) + Freie Skizze
-- ✅ Geführter Wizard + Freier Modus
-- ✅ Inline-Bearbeitung + Neu würfeln
-- ✅ 3 Sprachen (DE/EN/RU)
-- ✅ Mobilansicht mit Vollbild
-- ✅ SVG/PNG/JSON Export
-- ✅ Tool-Router für zukünftige Tools
-
-## Geplante Tools
-
-- 🔲 Mind-Map
-- 🔲 Vorher/Nachher-Vergleich
-- 🔲 Wertequadrat
-- 🔲 Dark Mode + Sharing
-
-## Setup
-
-```bash
+```
 npm install
-npm run dev        # Lokaler Dev-Server (Port 3000)
-npm run build      # Production Build
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .dev.vars
+npx wrangler pages dev -- npm run dev
 ```
 
-## Deployment (Cloudflare Pages)
-
-1. **Cloudflare Dashboard** → Workers & Pages → Create → Pages
-2. **Connect to Git** → GitHub-Repo `VisualThinkingToolbox` auswählen
-3. **Build-Einstellungen:**
-   - Framework preset: `None`
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. **Environment Variables** (Settings → Environment Variables):
-   - `ANTHROPIC_API_KEY` = dein Claude API Key
-   - `NODE_VERSION` = `18`
-5. **Deploy** — fertig! Jeder Push auf `main` deployt automatisch.
-
-Die Datei `functions/api/generate.js` wird automatisch als serverless Function unter `/api/generate` bereitgestellt.
-
-## Neues Tool hinzufügen
-
-1. Erstelle `src/MeinTool.jsx` mit `export default function MeinTool()`
-2. In `App.jsx` → `TOOLS`-Array ergänzen:
-   ```js
-   { id: 'meintool', name: 'Mein Tool', desc: '...', icon: '🔧', color: '#E8584F', ready: true, component: MeinTool }
-   ```
-3. Fertig — erscheint automatisch auf der Startseite.
+Cloudflare Pages: `npm run build` → `dist`

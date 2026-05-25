@@ -1,5 +1,3 @@
-// worker.js — LEGACY: Nur für standalone Cloudflare Worker Deployment.
-// Bei Cloudflare Pages wird stattdessen functions/api/generate.js verwendet.
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);

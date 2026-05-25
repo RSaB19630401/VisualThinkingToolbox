@@ -1,7 +1,11 @@
-name = "visual-thinking-toolbox"
+name = "sketchnote"
+main = "worker.js"
 compatibility_date = "2025-05-01"
-pages_build_output_dir = "dist"
 
-# Build-Kommando wird auch im Cloudflare Dashboard konfiguriert
 [build]
 command = "npm run build"
+
+[assets]
+directory = "dist"
+binding = "ASSETS"
+run_worker_first = true
