@@ -1,11 +1,11 @@
 // MindMapTool.jsx — Mind Map generator + editor with drag, import/export, delete, undo
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { mkR } from './primitives.js';
-import { Ic } from './icons.jsx';
 import { gc } from './palettes.js';
 import { FONT_CSS as FC, T } from './translations.js';
 import { callMindMapAPI } from './api.js';
 import { dlS, dlP } from './downloads.js';
+import { saveLast, loadLast, lastAge } from './storage.js';
 
 function dlB(b, n) {
   const u = URL.createObjectURL(b);
@@ -23,7 +23,7 @@ function svgPt(svgEl, clientX, clientY) {
 
 function MindMapSVG({ data, pal, offsets, onDragStart }) {
   const W = 1100, H = 750, cx = W / 2, cy = H / 2;
-  const seed = (data.title || '').length * 7 + 42, rng = mkR(seed);
+  const seed = (data.title || '').length * 7 + 42;
   const branches = data.branches || [];
   const n = branches.length || 1;
 
@@ -112,6 +112,11 @@ export default function MindMapTool({ lang, pal, baseColor, onBack }) {
   const dragRef = useRef(null);
   const svgRef = useRef(null);
   const t = T[lang] || T.de;
+
+  // Persistenz: letzten Stand speichern (#8)
+  useEffect(() => {
+    if (data) saveLast('mindmap', { topic, data, offsets });
+  }, [data, offsets]);
 
   const saveUndo = () => { undoRef.current = { data: JSON.parse(JSON.stringify(data)), offsets: { ...offsets } }; };
   const undo = () => { if (undoRef.current) { setData(undoRef.current.data); setOffsets(undoRef.current.offsets); undoRef.current = null; } };
@@ -214,6 +219,11 @@ export default function MindMapTool({ lang, pal, baseColor, onBack }) {
         <button onClick={onBack} style={bt2('#888', false)}>← Zurück</button>
         <button onClick={generate} disabled={!topic.trim()} style={bt2(topic.trim() ? '#3B7DD8' : '#ccc', true)}>✨ Erstellen</button>
         <button onClick={() => fileRef.current?.click()} style={bt2('#F5A623', false)}>📂 Laden</button>
+        {loadLast('mindmap') && (
+          <button onClick={() => { const l = loadLast('mindmap'); if (l?.data) { setData(l.data); setTopic(l.topic || ''); setOffsets(l.offsets || {}); } }} style={bt2('#8B6544', false)}>
+            ↩ Letzter Stand {lastAge('mindmap', lang) ? `(${lastAge('mindmap', lang)})` : ''}
+          </button>
+        )}
         <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} />
       </div>
     </div>

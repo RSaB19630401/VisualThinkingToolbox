@@ -65,6 +65,17 @@ export default {
       });
     }
 
+    // ── Rate limiting (per client IP) — image gen is expensive ──
+    if (env.RATE_LIMITER) {
+      const ip = request.headers.get('CF-Connecting-IP') || 'anon';
+      const { success } = await env.RATE_LIMITER.limit({ key: ip });
+      if (!success) {
+        return new Response(JSON.stringify({ error: 'Zu viele Bild-Anfragen. Bitte kurz warten.' }), {
+          status: 429, headers: { ...CORS, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     try {
       const data = await request.json();
       const prompt = buildPrompt(data);

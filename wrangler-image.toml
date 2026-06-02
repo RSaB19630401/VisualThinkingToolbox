@@ -1,0 +1,10 @@
+name = "sketchnote-image"
+main = "worker-image.js"
+compatibility_date = "2025-05-01"
+
+# Rate limiting: max 8 Bilder pro 60 Sek. je IP (DALL-E ist teuer)
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 8, period = 60 }

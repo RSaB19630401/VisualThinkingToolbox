@@ -1,23 +1,24 @@
 // SketchnoteTool.jsx — 6 Layouts + KI-Bild + KI-Sketch (aus "Open Peeps" Chat)
 // Angepasst auf V4-Architektur: empfängt Props von App.jsx
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { SCENE_NAMES } from "./scenes.jsx";
-import { ICON_NAMES } from "./icons.jsx";
 import { FONT_CSS as FC, T } from "./translations.js";
 import { PAL, gc, MOOD_VALS, resolvePalette } from "./palettes.js";
 import { StructSVG, JourneySVG, PosterSVG, FlowSVG } from "./Layouts.jsx";
 import { callAPI } from "./api.js";
 import { dlS, dlP, dlJ } from "./downloads.js";
 import { vd } from "./validate.js";
+import { saveLast, loadLast, lastAge } from "./storage.js";
 
 /* ═══ AI IMAGE LAYOUT (DALL-E via Worker) ═══ */
 const IMAGE_WORKER_URL = 'https://sketchnote-image.rsab1963.workers.dev';
 
-function ImageLayout({ data, pal }) {
-  const [imgSrc, setImgSrc] = React.useState(null);
+function ImageLayout({ data, pal, cache }) {
+  const cacheKey = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
+  const [imgSrc, setImgSrc] = React.useState(cache.current?.key === cacheKey ? cache.current.src : null);
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState(null);
-  const dataKey = React.useRef('');
+  const dataKey = React.useRef(cache.current?.key === cacheKey ? cacheKey : '');
 
   const generate = React.useCallback(async () => {
     setLoading(true); setErr(null); setImgSrc(null);
@@ -39,21 +40,22 @@ function ImageLayout({ data, pal }) {
       const blob = await res.blob();
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (reader.result) setImgSrc(reader.result);
+        if (reader.result) { setImgSrc(reader.result); cache.current = { key: cacheKey, src: reader.result }; }
         else setErr('Bild konnte nicht geladen werden');
       };
       reader.readAsDataURL(blob);
     } catch (e) { setErr(e.message || 'Bildgenerierung fehlgeschlagen'); }
     finally { setLoading(false); }
-  }, [data]);
+  }, [data, cacheKey, cache]);
 
   React.useEffect(() => {
-    const key = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
-    if (key !== dataKey.current) { dataKey.current = key; generate(); }
-  }, [data, generate]);
+    // Nur generieren, wenn kein gültiger Cache-Eintrag für diese Daten existiert
+    if (cache.current?.key === cacheKey && cache.current.src) { setImgSrc(cache.current.src); return; }
+    if (cacheKey !== dataKey.current) { dataKey.current = cacheKey; generate(); }
+  }, [data, generate, cacheKey, cache]);
 
   if (loading) return (
-    <div style={{ width: '100%', aspectRatio: '1792/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
+    <div style={{ width: '100%', aspectRatio: '1536/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
       <div style={{ fontSize: 48, animation: 'spin 1.5s linear infinite' }}>🎨</div>
       <p style={{ fontFamily: 'Caveat, cursive', fontSize: 22, color: '#E8584F', marginTop: 16 }}>KI zeichnet dein Sketchnote...</p>
       <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 14, color: '#888' }}>Professionelle Illustration · ~15-20 Sek.</p>
@@ -61,7 +63,7 @@ function ImageLayout({ data, pal }) {
     </div>
   );
   if (err) return (
-    <div style={{ width: '100%', aspectRatio: '1792/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
+    <div style={{ width: '100%', aspectRatio: '1536/1024', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
       <p style={{ fontFamily: 'Patrick Hand, cursive', fontSize: 16, color: '#E8584F', maxWidth: 400, textAlign: 'center' }}>⚠ {err}</p>
       <button onClick={generate} style={{ marginTop: 12, padding: '8px 24px', borderRadius: 10, border: 'none', background: '#E8584F', color: '#fff', fontFamily: 'Caveat, cursive', fontSize: 16, cursor: 'pointer' }}>🔄 Erneut versuchen</button>
     </div>
@@ -82,11 +84,12 @@ Figuren: Runde Köpfe (circle r=12-14), Punkte für Augen, Kurve für Mund, Haar
 LAYOUT: 1) Großer Titel oben im farbigen Banner. 2) 4-6 nummerierte Sektionen mit Illustration + Stichpunkten. 3) Werkzeugkasten/Erinnerung unten. 4) Zentrale Botschaft.
 WICHTIG: NUR SVG-Code, kein Markdown. Beginne mit <svg, ende mit </svg>. Alle Texte Deutsch. Mindestens 4 verschiedene Figuren.`;
 
-function SketchLayout({ data, pal }) {
-  const [svgCode, setSvgCode] = React.useState(null);
+function SketchLayout({ data, pal, cache }) {
+  const cacheKey = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
+  const [svgCode, setSvgCode] = React.useState(cache.current?.key === cacheKey ? cache.current.svg : null);
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState(null);
-  const dataKey = React.useRef('');
+  const dataKey = React.useRef(cache.current?.key === cacheKey ? cacheKey : '');
 
   const generate = React.useCallback(async () => {
     setLoading(true); setErr(null);
@@ -100,20 +103,22 @@ function SketchLayout({ data, pal }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
       });
+      if (res.status === 429) throw new Error('Rate-Limit erreicht. Bitte kurz warten.');
       if (!res.ok) throw new Error(`API-Fehler: HTTP ${res.status}`);
       const json = await res.json();
+      if (json.error) throw new Error(json.error.message || json.error);
       const text = json.content?.[0]?.text || '';
       const match = text.match(/<svg[\s\S]*<\/svg>/);
       if (!match) throw new Error('Kein SVG in der Antwort');
-      setSvgCode(match[0]);
+      setSvgCode(match[0]); cache.current = { key: cacheKey, svg: match[0] };
     } catch (e) { setErr(e.message || 'SVG-Generierung fehlgeschlagen'); }
     finally { setLoading(false); }
-  }, [data]);
+  }, [data, cacheKey, cache]);
 
   React.useEffect(() => {
-    const key = JSON.stringify(data.title + (data.sections || []).map(s => s.title).join());
-    if (key !== dataKey.current) { dataKey.current = key; generate(); }
-  }, [data, generate]);
+    if (cache.current?.key === cacheKey && cache.current.svg) { setSvgCode(cache.current.svg); return; }
+    if (cacheKey !== dataKey.current) { dataKey.current = cacheKey; generate(); }
+  }, [data, generate, cacheKey, cache]);
 
   if (loading) return (
     <div style={{ width: '100%', aspectRatio: '1100/780', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px solid #f0e0d8' }}>
@@ -143,7 +148,7 @@ const bt = (c, f) => ({ padding: '9px 16px', borderRadius: 10, border: f ? 'none
 const sl = (t) => (t || 'x').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
 
 /* ═══ MAIN SKETCHNOTE TOOL ═══ */
-export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseColor, sharedMoodKey, onHome }) {
+export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseColor, sharedMoodKey, onHome, onLangChange }) {
   const [ph, setPh] = useState('mode');
   const [mode, setMode] = useState(null);
   const [ans, setAns] = useState({});
@@ -155,12 +160,23 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
   const [ft, setFt] = useState('');
   const [frs, setFrs] = useState('flow');
   const [ed, setEd] = useState(false);
-  const [lang, setLang] = useState(propLang || 'de');
+  const [lang, setLangState] = useState(propLang || 'de');
   const [fs, setFs] = useState(false);
   const [baseColor, setBaseColor] = useState(sharedBaseColor || null);
   const [moodKey, setMoodKey] = useState(sharedMoodKey || 'neutral');
   const fr = useRef(null);
+  // KI-Caches: behalten generierte Ergebnisse beim Layout-Wechsel (spart Kosten/Zeit)
+  const imgCache = useRef(null);
+  const sketchCache = useRef(null);
   const t = T[lang] || T.de;
+
+  // Sprache zentral halten: interne Änderung an App hochreichen (#5)
+  const setLang = (l) => { setLangState(l); if (onLangChange) onLangChange(l); };
+
+  // Persistenz: letztes Ergebnis speichern (#8)
+  useEffect(() => {
+    if (sn) saveLast('sketchnote', { ans, sn, mode, rs, baseColor });
+  }, [sn, rs]);
 
   const updSec = (idx, f2, v) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === idx ? { ...s, [f2]: v } : s) }; }); };
   const updItem = (si, ii, v) => { setSn(p => { if (!p) return p; return { ...p, sections: p.sections.map((s, i) => i === si ? { ...s, items: s.items.map((x, j) => j === ii ? v : x) } : s) }; }); };
@@ -172,6 +188,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
 
   const gen = useCallback(async (a, m) => {
     setAns(a); setPh('loading'); setErr(null);
+    imgCache.current = null; sketchCache.current = null; // neue Daten → KI-Cache leeren
     try {
       const d = await callAPI(a, m, 0, lang);
       const mi2 = t.steps[5].o.indexOf(a.mood);
@@ -214,6 +231,13 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
           <div style={{ fontFamily: 'Caveat,cursive', fontSize: 19, fontWeight: 700, color: '#2D2D2D' }}>{t.load || '📂 Laden'}</div>
           <div style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginTop: 2 }}>{t.loadDesc || 'Gespeichertes .json importieren.'}</div>
         </button>
+        {loadLast('sketchnote') && (
+          <button onClick={() => { const l = loadLast('sketchnote'); if (l?.sn) { setSn(vd(l.sn)); setAns(l.ans || {}); setMode(l.mode || 'free'); setRs(l.rs || 'structured'); setBaseColor(l.baseColor ?? null); setPal(resolvePalette(l.baseColor ?? baseColor, l.sn.mood || 'neutral')); setPh('result'); } }}
+            style={{ display: 'block', width: '100%', marginTop: 12, padding: 16, borderRadius: 14, border: '2px solid #e0e0e0', background: '#fff', textAlign: 'left', cursor: 'pointer' }}>
+            <div style={{ fontFamily: 'Caveat,cursive', fontSize: 19, fontWeight: 700, color: '#8B6544' }}>↩ Letzter Stand {lastAge('sketchnote', lang) ? `(${lastAge('sketchnote', lang)})` : ''}</div>
+            <div style={{ fontFamily: 'Patrick Hand,cursive', fontSize: 14, color: '#888', marginTop: 2 }}>Dein zuletzt erstelltes Sketchnote öffnen.</div>
+          </button>
+        )}
         <input ref={fr} type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
           const f = e.target.files?.[0]; if (!f) return;
           const reader = new FileReader();
@@ -278,8 +302,8 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
   /* ─── RESULT ─── */
   if (ph === 'result' && sn) {
     let svg;
-    if (rs === 'aigen') { svg = <ImageLayout data={sn} pal={pal} />; }
-    else if (rs === 'aisketch') { svg = <SketchLayout data={sn} pal={pal} />; }
+    if (rs === 'aigen') { svg = <ImageLayout data={sn} pal={pal} cache={imgCache} />; }
+    else if (rs === 'aisketch') { svg = <SketchLayout data={sn} pal={pal} cache={sketchCache} />; }
     else { try { const L = { structured: StructSVG, journey: JourneySVG, poster: PosterSVG, flow: FlowSVG }; const Comp = L[rs] || StructSVG; svg = <Comp data={sn} pal={pal} />; }
     catch (e) { svg = <div style={{ padding: 20, color: '#E8584F' }}>Error: {e.message}</div>; } }
     const eS = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '2px solid #e0e0e0', fontFamily: 'Patrick Hand,cursive', fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' };

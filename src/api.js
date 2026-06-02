@@ -15,14 +15,23 @@ async function apiCall(sys, usr, attempt = 0) {
     await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
     return apiCall(sys, usr, attempt + 1);
   }
-  if (!res.ok) throw new Error(res.status === 429 ? 'Rate-Limit. Bitte 30s warten.' : `API-Fehler ${res.status}`);
+  if (!res.ok) throw new Error(res.status === 429 ? 'Rate-Limit erreicht. Bitte kurz warten.' : `API-Fehler ${res.status}`);
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = (data.content || []).map(b => b.text || '').join('');
-  if (!text.trim()) throw new Error('Leer');
+  if (!text.trim()) {
+    if (attempt < 1) return apiCall(sys, usr, attempt + 1);
+    throw new Error('Leere Antwort der KI');
+  }
   const cl = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   try { return JSON.parse(cl); }
-  catch (e) { const mt = cl.match(/\{[\s\S]*\}/); if (mt) return JSON.parse(mt[0]); throw new Error('JSON-Fehler'); }
+  catch (e) {
+    const mt = cl.match(/\{[\s\S]*\}/);
+    if (mt) { try { return JSON.parse(mt[0]); } catch (e2) { /* fall through to retry */ } }
+    // Parse-Retry: KI liefert gelegentlich kaputtes JSON → einmal neu versuchen
+    if (attempt < 1) return apiCall(sys, usr, attempt + 1);
+    throw new Error('KI lieferte ungültiges JSON. Bitte erneut versuchen.');
+  }
 }
 
 // ── SKETCHNOTE ──

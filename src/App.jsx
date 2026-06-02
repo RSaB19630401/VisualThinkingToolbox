@@ -35,7 +35,7 @@ export default function App() {
   // ── Tool views ──
   if (tool === 'sketchnote') return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg,#FEFCFB,#F5F0EB)' }}>
-      <SketchnoteTool lang={lang} sharedPal={pal} sharedBaseColor={baseColor} sharedMoodKey={moodKey} onHome={goHome} />
+      <SketchnoteTool lang={lang} sharedPal={pal} sharedBaseColor={baseColor} sharedMoodKey={moodKey} onHome={goHome} onLangChange={setLang} />
     </div>
   );
   if (tool === 'mindmap') return (

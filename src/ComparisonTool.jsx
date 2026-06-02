@@ -1,12 +1,13 @@
 // ComparisonTool.jsx — Vergleichsbild: Spalten (2-4) + Venn (2-4 Kreise)
 // Layout-Wechsel direkt in Ergebnisansicht
-import React, { useState, useCallback, useRef } from 'react';
-import { mkR, rr, blob } from './primitives.js';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { mkR, rr } from './primitives.js';
 import { Ic } from './icons.jsx';
 import { gc } from './palettes.js';
 import { FONT_CSS as FC } from './translations.js';
 import { callComparisonAPI } from './api.js';
 import { dlS, dlP } from './downloads.js';
+import { saveLast, loadLast, lastAge } from './storage.js';
 
 function dlB(b, n) {
   const u = URL.createObjectURL(b);
@@ -46,65 +47,60 @@ function ColumnSVG({ data, pal }) {
   </svg>);
 }
 
-/* ═══ VENN DIAGRAM — 2, 3, or 4 circles ═══ */
+/* ═══ VENN DIAGRAM — 2, 3, or 4 circles, collision-aware text ═══ */
 function VennSVG({ data, pal, circleCount }) {
   const cols = data.columns || [];
   const n = Math.min(circleCount || cols.length, 4);
-  const W = n <= 2 ? 900 : 1000, H = n <= 2 ? 600 : 700;
-  const seed = (data.title || '').length * 7 + 42;
+  const W = n <= 2 ? 920 : 1040, H = n <= 2 ? 600 : 720;
+  const cx0 = W / 2, cy0 = H / 2 + 10;
   const colors = cols.map((c, i) => gc(pal, c.color || ['primary', 'secondary', 'accent', 'primary'][i]));
 
-  // Circle positions based on count
+  // Circle positions
   const positions = {
-    2: [{ cx: 340, cy: 320, r: 175 }, { cx: 560, cy: 320, r: 175 }],
-    3: [{ cx: 400, cy: 280, r: 155 }, { cx: 600, cy: 280, r: 155 }, { cx: 500, cy: 440, r: 155 }],
-    4: [{ cx: 360, cy: 280, r: 140 }, { cx: 560, cy: 280, r: 140 }, { cx: 360, cy: 440, r: 140 }, { cx: 560, cy: 440, r: 140 }],
+    2: [{ cx: cx0 - 110, cy: cy0, r: 175 }, { cx: cx0 + 110, cy: cy0, r: 175 }],
+    3: [{ cx: cx0 - 105, cy: cy0 - 75, r: 150 }, { cx: cx0 + 105, cy: cy0 - 75, r: 150 }, { cx: cx0, cy: cy0 + 110, r: 150 }],
+    4: [{ cx: cx0 - 100, cy: cy0 - 95, r: 135 }, { cx: cx0 + 100, cy: cy0 - 95, r: 135 }, { cx: cx0 - 100, cy: cy0 + 95, r: 135 }, { cx: cx0 + 100, cy: cy0 + 95, r: 135 }],
   };
-  const pos = positions[n] || positions[2];
-
-  // Text positions (outside overlap areas)
-  const textPos = {
-    2: [{ x: 220, y: 180 }, { x: 640, y: 180 }],
-    3: [{ x: 270, y: 170 }, { x: 710, y: 170 }, { x: 500, y: 560 }],
-    4: [{ x: 230, y: 190 }, { x: 680, y: 190 }, { x: 230, y: 530 }, { x: 680, y: 530 }],
-  };
-  const tPos = textPos[n] || textPos[2];
+  const pos = (positions[n] || positions[2]).slice(0, n);
 
   return (<svg id="sketchnote-svg" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', background: pal.bg, borderRadius: 12 }}>
     <defs><style>{FC}</style></defs>
     <rect width={W} height={H} fill={pal.bg} rx="10" />
-    <text x={W / 2} y={38} textAnchor="middle" fontFamily="Caveat" fontSize="26" fontWeight="700" fill={pal.t}>{data.title}</text>
-    {data.subtitle && <text x={W / 2} y={60} textAnchor="middle" fontFamily="Patrick Hand" fontSize="13" fill={pal.t} opacity="0.5">{data.subtitle}</text>}
+    <text x={W / 2} y={36} textAnchor="middle" fontFamily="Caveat" fontSize="26" fontWeight="700" fill={pal.t}>{data.title}</text>
+    {data.subtitle && <text x={W / 2} y={56} textAnchor="middle" fontFamily="Patrick Hand" fontSize="13" fill={pal.t} opacity="0.5">{data.subtitle}</text>}
 
     {/* Circles */}
     {pos.map((p, i) => (
       <circle key={i} cx={p.cx} cy={p.cy} r={p.r} fill={colors[i] || pal.p} opacity="0.08" stroke={colors[i] || pal.p} strokeWidth="2.5" />
     ))}
 
-    {/* Labels + Items per circle */}
+    {/* Labels + items — placed radially outward from cluster center */}
     {cols.slice(0, n).map((col, i) => {
-      const tp = tPos[i] || { x: 100, y: 100 };
+      const p = pos[i];
+      const dx = p.cx - cx0, dy = p.cy - cy0;
+      const len = Math.hypot(dx, dy) || 1;
+      // text anchor point pushed outward beyond circle edge
+      const tx = p.cx + (dx / len) * (p.r * 0.55);
+      const ty = p.cy + (dy / len) * (p.r * 0.55) - 10;
+      const anchor = dx < -20 ? 'end' : dx > 20 ? 'start' : 'middle';
+      const items = (col.items || []).slice(0, 4);
       return (<g key={i}>
-        <text x={tp.x} y={tp.y} fontFamily="Caveat" fontSize="18" fontWeight="700" fill={colors[i] || pal.p}>{col.label || String.fromCharCode(65 + i)}</text>
-        {(col.items || []).slice(0, 4).map((item, j) => (
-          <text key={j} x={tp.x} y={tp.y + 22 + j * 22} fontFamily="Patrick Hand" fontSize="13" fill={pal.t}>{(item || '').slice(0, 26)}</text>
+        <text x={tx} y={ty} textAnchor={anchor} fontFamily="Caveat" fontSize="18" fontWeight="700" fill={colors[i] || pal.p}>{(col.label || String.fromCharCode(65 + i)).slice(0, 18)}</text>
+        {items.map((item, j) => (
+          <text key={j} x={tx} y={ty + 20 + j * 19} textAnchor={anchor} fontFamily="Patrick Hand" fontSize="12.5" fill={pal.t}>{(item || '').slice(0, 24)}</text>
         ))}
       </g>);
     })}
 
-    {/* Shared area (center) */}
+    {/* Shared area — center of cluster */}
     {(data.shared || []).length > 0 && (<g>
-      {n === 2 && <text x={450} y={260} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} opacity="0.7">Gemeinsam</text>}
-      {n === 3 && <text x={500} y={350} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} opacity="0.7">Gemeinsam</text>}
-      {n === 4 && <text x={460} y={350} textAnchor="middle" fontFamily="Caveat" fontSize="14" fontWeight="600" fill={pal.p} opacity="0.7">Gemeinsam</text>}
-      {(data.shared || []).map((item, j) => {
-        const sy = n === 2 ? 280 : n === 3 ? 370 : 370;
-        const sx = n === 2 ? 450 : n === 3 ? 500 : 460;
-        return <text key={j} x={sx} y={sy + j * 22} textAnchor="middle" fontFamily="Patrick Hand" fontSize="13" fontWeight="600" fill={pal.p}>{item}</text>;
-      })}
+      <text x={cx0} y={cy0 - 8} textAnchor="middle" fontFamily="Caveat" fontSize="13" fontWeight="600" fill={pal.p} opacity="0.6">∩ Gemeinsam</text>
+      {(data.shared || []).slice(0, 3).map((item, j) => (
+        <text key={j} x={cx0} y={cy0 + 12 + j * 18} textAnchor="middle" fontFamily="Patrick Hand" fontSize="12" fontWeight="600" fill={pal.p}>{(item || '').slice(0, 22)}</text>
+      ))}
     </g>)}
 
-    {data.conclusion && <text x={W / 2} y={H - 20} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="600" fill={pal.p} fontStyle="italic">{data.conclusion}</text>}
+    {data.conclusion && <text x={W / 2} y={H - 16} textAnchor="middle" fontFamily="Caveat" fontSize="15" fontWeight="600" fill={pal.p} fontStyle="italic">{data.conclusion}</text>}
   </svg>);
 }
 
@@ -128,14 +124,22 @@ export default function ComparisonTool({ lang, pal, onBack }) {
   const [fs, setFs] = useState(false);
   const undoRef = useRef(null);
   const topicRef = useRef('');
+  const layoutCacheRef = useRef({}); // { layoutId: data } — Rückwechsel ohne API-Call
 
-  const generate = useCallback(async (tp, lay) => {
+  // Persistenz (#8)
+  useEffect(() => {
+    if (data) saveLast('comparison', { topic: topicRef.current, layout, data });
+  }, [data, layout]);
+
+  const generate = useCallback(async (tp, lay, force = false) => {
     const t = tp || topicRef.current || topic;
     const l = lay || layout;
     if (!t.trim()) return;
     topicRef.current = t;
+    // Cache-Treffer? → ohne API-Call anzeigen (außer force = Neu-Würfeln)
+    if (!force && layoutCacheRef.current[l]) { setData(layoutCacheRef.current[l]); setLayout(l); return; }
     setLoading(true); setErr(null);
-    try { const d = await callComparisonAPI(t, l, lang); setData(d); setLayout(l); }
+    try { const d = await callComparisonAPI(t, l, lang); setData(d); setLayout(l); layoutCacheRef.current[l] = d; }
     catch (e) { setErr(e.message); }
     setLoading(false);
   }, [topic, layout, lang]);
@@ -145,6 +149,7 @@ export default function ComparisonTool({ lang, pal, onBack }) {
     setLayout(newLayout);
     generate(topicRef.current, newLayout);
   };
+  const reroll = () => { layoutCacheRef.current = {}; generate(topicRef.current, layout, true); };
 
   const withUndo = (fn) => setData(prev => { if (!prev) return prev; undoRef.current = JSON.parse(JSON.stringify(prev)); const d = JSON.parse(JSON.stringify(prev)); fn(d); return d; });
   const undo = () => { if (undoRef.current) { setData(undoRef.current); undoRef.current = null; } };
@@ -184,9 +189,14 @@ export default function ComparisonTool({ lang, pal, onBack }) {
           <button key={l.id} onClick={() => setLayout(l.id)} style={{ padding: '7px 14px', borderRadius: 8, border: layout === l.id ? '2px solid #4CAF50' : '2px solid #e0e0e0', background: layout === l.id ? '#F0FFF0' : '#fff', fontFamily: 'Patrick Hand,cursive', fontSize: 14, cursor: 'pointer', color: '#2D2D2D' }}>{l.label}</button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+      <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
         <button onClick={onBack} style={bt2('#888', false)}>← Zurück</button>
         <button onClick={() => generate(topic, layout)} disabled={!topic.trim()} style={bt2(topic.trim() ? '#4CAF50' : '#ccc', true)}>✨ Erstellen</button>
+        {loadLast('comparison') && (
+          <button onClick={() => { const l = loadLast('comparison'); if (l?.data) { setData(l.data); topicRef.current = l.topic || ''; setTopic(l.topic || ''); setLayout(l.layout || '2col'); layoutCacheRef.current = { [l.layout]: l.data }; } }} style={bt2('#8B6544', false)}>
+            ↩ Letzter Stand {lastAge('comparison', lang) ? `(${lastAge('comparison', lang)})` : ''}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -210,7 +220,7 @@ export default function ComparisonTool({ lang, pal, onBack }) {
       <style>{FC}</style>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
         <button onClick={onBack} style={bt2('#888', false)}>← Zurück</button>
-        <button onClick={() => generate(topicRef.current, layout)} style={bt2('#E8584F', false)}>🎲 Neu</button>
+        <button onClick={reroll} style={bt2('#E8584F', false)}>🎲 Neu</button>
         <button onClick={undo} disabled={!undoRef.current} style={bt2(undoRef.current ? '#E8584F' : '#ccc', false)}>↩ Undo</button>
         <button onClick={() => setEd(e => !e)} style={bt2(ed ? '#E8584F' : '#7B68AE', ed)}>{ed ? '✓ Fertig' : '📝 Bearbeiten'}</button>
       </div>
