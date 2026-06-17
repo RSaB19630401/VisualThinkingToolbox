@@ -101,8 +101,13 @@ function SketchLayout({ data, pal, cache }) {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
       const res = await fetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
-      });
+        body: JSON.stringify({ max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
+
+Wie es danach funktioniert: Das Frontend schickt kein Modell mehr mit. Die Function setzt über body.model || MODEL automatisch claude-sonnet-4-6 ein. Beim nächsten Modellwechsel (kommt erfahrungsgemäß alle paar Monate) änderst du nur die eine Zeile const MODEL = '...' in generate.js — fertig.
+Diese drei Edits ersetzen die vorherige 3-fach-Ersetzung; du kannst sie direkt so machen, falls du den schnellen Fix noch nicht committet hast. Das Ergebnis ist identisch, nur wartbarer.
+Ein ehrlicher Trade-off: Mit body.model || MODEL kann das Frontend theoretisch weiterhin ein Modell überschreiben (falls du es mal brauchst). Willst du das komplett unterbinden, damit niemand über manipulierte Requests ein teureres Modell erzwingt, ersetzt du in generate.js einfach body.model || MODEL durch nur MODEL. Für deinen Anwendungsfall ist beides vertretbar — die offene Variante ist flexibler, die feste minimal sicherer.
+Sag Bescheid, ob „Erstellen" nach dem Re-Deploy läuft.
+Opus 4.8 HochClaude ist eine KI und kann Fehler machen. Bitte überprüfe die Antworten.
       if (res.status === 429) throw new Error('Rate-Limit erreicht. Bitte kurz warten.');
       if (!res.ok) throw new Error(`API-Fehler: HTTP ${res.status}`);
       const json = await res.json();
