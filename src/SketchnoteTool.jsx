@@ -101,7 +101,7 @@ function SketchLayout({ data, pal, cache }) {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
       const res = await fetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
       });
       if (res.status === 429) throw new Error('Rate-Limit erreicht. Bitte kurz warten.');
       if (!res.ok) throw new Error(`API-Fehler: HTTP ${res.status}`);
