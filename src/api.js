@@ -9,7 +9,7 @@ async function apiCall(sys, usr, attempt = 0) {
   const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
   const res = await fetch(apiUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: sys, messages: [{ role: 'user', content: usr }] }),
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, system: sys, messages: [{ role: 'user', content: usr }] }),
   });
   if (res.status === 429 && attempt < 2) {
     await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
