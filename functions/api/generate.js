@@ -1,5 +1,8 @@
 // /functions/api/generate.js
 
+// Zentrale Modell-Definition — bei künftigem Modellwechsel NUR hier ändern.
+const MODEL = 'claude-sonnet-4-6';
+
 export async function onRequest(context) {
   // CORS preflight
   if (context.request.method === 'OPTIONS') {
