@@ -1,7 +1,7 @@
 // SketchnoteTool.jsx — 6 Layouts + KI-Bild + KI-Sketch (aus "Open Peeps" Chat)
 // Angepasst auf V4-Architektur: empfängt Props von App.jsx
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { SCENE_NAMES } from "./scenes.jsx";
+import { SCENE_NAMES, SCENE_LABELS } from "./scenes.jsx";
 import { FONT_CSS as FC, T } from "./translations.js";
 import { PAL, gc, MOOD_VALS, resolvePalette } from "./palettes.js";
 import { StructSVG, JourneySVG, PosterSVG, FlowSVG } from "./Layouts.jsx";
@@ -102,12 +102,7 @@ function SketchLayout({ data, pal, cache }) {
       const res = await fetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
-
-Wie es danach funktioniert: Das Frontend schickt kein Modell mehr mit. Die Function setzt über body.model || MODEL automatisch claude-sonnet-4-6 ein. Beim nächsten Modellwechsel (kommt erfahrungsgemäß alle paar Monate) änderst du nur die eine Zeile const MODEL = '...' in generate.js — fertig.
-Diese drei Edits ersetzen die vorherige 3-fach-Ersetzung; du kannst sie direkt so machen, falls du den schnellen Fix noch nicht committet hast. Das Ergebnis ist identisch, nur wartbarer.
-Ein ehrlicher Trade-off: Mit body.model || MODEL kann das Frontend theoretisch weiterhin ein Modell überschreiben (falls du es mal brauchst). Willst du das komplett unterbinden, damit niemand über manipulierte Requests ein teureres Modell erzwingt, ersetzt du in generate.js einfach body.model || MODEL durch nur MODEL. Für deinen Anwendungsfall ist beides vertretbar — die offene Variante ist flexibler, die feste minimal sicherer.
-Sag Bescheid, ob „Erstellen" nach dem Re-Deploy läuft.
-Opus 4.8 HochClaude ist eine KI und kann Fehler machen. Bitte überprüfe die Antworten.
+      });
       if (res.status === 429) throw new Error('Rate-Limit erreicht. Bitte kurz warten.');
       if (!res.ok) throw new Error(`API-Fehler: HTTP ${res.status}`);
       const json = await res.json();
@@ -351,7 +346,7 @@ export default function SketchnoteTool({ lang: propLang, sharedPal, sharedBaseCo
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: 'Caveat,cursive', fontSize: 16, fontWeight: 700, color: gc(pal, sec.color), minWidth: 24 }}>{sec.n}.</span>
                     <input value={sec.title} onChange={e => updSec(si, 'title', e.target.value)} style={{ ...eS, flex: 1, minWidth: 120, fontWeight: 600 }} />
-                    <select value={sec.scene || ''} onChange={e => updSec(si, 'scene', e.target.value || null)} style={{ ...eS, width: 130, flex: 'none' }}><option value="">{t.noScene}</option>{SCENE_NAMES.map(s => (<option key={s} value={s}>{s}</option>))}</select>
+                    <select value={sec.scene || ''} onChange={e => updSec(si, 'scene', e.target.value || null)} style={{ ...eS, width: 130, flex: 'none' }}><option value="">{t.noScene}</option>{SCENE_NAMES.map(s => (<option key={s} value={s}>{(SCENE_LABELS[lang] || SCENE_LABELS.de)[s] || s}</option>))}</select>
                     <select value={sec.color} onChange={e => updSec(si, 'color', e.target.value)} style={{ ...eS, width: 95, flex: 'none' }}><option value="primary">{t.primary}</option><option value="secondary">{t.secondary}</option><option value="accent">{t.accent}</option></select>
                   </div>
                   {sec.items.map((item, ii) => (<div key={ii} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center', paddingLeft: 32 }}><span style={{ color: gc(pal, sec.color), fontSize: 18 }}>*</span><input value={item} onChange={e => updItem(si, ii, e.target.value)} style={{ ...eS, flex: 1 }} /><button onClick={() => delItem(si, ii)} style={{ background: 'none', border: 'none', color: '#E8584F', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}>x</button></div>))}

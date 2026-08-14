@@ -11,6 +11,43 @@ export const SCENE_NAMES = [
   'mirrorReflect','scaleBalance','networkNodes','treasure','wallBreak'
 ];
 
+export const SCENE_LABELS = {
+  de: {
+    mountainClimb: 'Berg erklimmen', targetHit: 'Ziel treffen', bridge: 'Brücke',
+    seedToTree: 'Vom Samen zum Baum', lighthouse: 'Leuchtturm', teamCircle: 'Team-Kreis',
+    ladder: 'Leiter', compass: 'Kompass', figureThinking: 'Nachdenken',
+    figureCelebrate: 'Feiern', doorOpen: 'Offene Tür', puzzleFit: 'Puzzle passt',
+    figureHandshake: 'Handschlag', figureConversation: 'Gespräch', figureListening: 'Zuhören',
+    figureHug: 'Umarmung', figureFear: 'Angst', figureDoubt: 'Zweifel',
+    figureBalance: 'Balance', figureCourage: 'Mut', windingRoad: 'Kurviger Weg',
+    mirrorReflect: 'Spiegelung', scaleBalance: 'Waage', networkNodes: 'Netzwerk',
+    treasure: 'Schatz', wallBreak: 'Mauer durchbrechen',
+  },
+  en: {
+    mountainClimb: 'Mountain climb', targetHit: 'Hit target', bridge: 'Bridge',
+    seedToTree: 'Seed to tree', lighthouse: 'Lighthouse', teamCircle: 'Team circle',
+    ladder: 'Ladder', compass: 'Compass', figureThinking: 'Thinking',
+    figureCelebrate: 'Celebrating', doorOpen: 'Open door', puzzleFit: 'Puzzle fit',
+    figureHandshake: 'Handshake', figureConversation: 'Conversation', figureListening: 'Listening',
+    figureHug: 'Hug', figureFear: 'Fear', figureDoubt: 'Doubt',
+    figureBalance: 'Balance', figureCourage: 'Courage', windingRoad: 'Winding road',
+    mirrorReflect: 'Reflection', scaleBalance: 'Scales', networkNodes: 'Network',
+    treasure: 'Treasure', wallBreak: 'Break wall',
+  },
+  ru: {
+    mountainClimb: 'Восхождение', targetHit: 'Попадание в цель', bridge: 'Мост',
+    seedToTree: 'От семени к дереву', lighthouse: 'Маяк', teamCircle: 'Круг команды',
+    ladder: 'Лестница', compass: 'Компас', figureThinking: 'Размышление',
+    figureCelebrate: 'Праздник', doorOpen: 'Открытая дверь', puzzleFit: 'Пазл сходится',
+    figureHandshake: 'Рукопожатие', figureConversation: 'Разговор', figureListening: 'Слушание',
+    figureHug: 'Объятие', figureFear: 'Страх', figureDoubt: 'Сомнение',
+    figureBalance: 'Баланс', figureCourage: 'Смелость', windingRoad: 'Извилистый путь',
+    mirrorReflect: 'Отражение', scaleBalance: 'Весы', networkNodes: 'Сеть',
+    treasure: 'Сокровище', wallBreak: 'Пробить стену',
+  },
+};
+
+
 export function Sc(name, x, y, s, c) {
   const t = `translate(${x},${y}) scale(${s})`;
   const lw = 2.2;
