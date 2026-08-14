@@ -10,6 +10,7 @@ async function apiCall(sys, usr, attempt = 0) {
   const res = await fetch(apiUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ max_tokens: 2000, system: sys, messages: [{ role: 'user', content: usr }] }),
+  });
   if (res.status === 429 && attempt < 2) {
     await new Promise(r => setTimeout(r, (attempt + 1) * 15000));
     return apiCall(sys, usr, attempt + 1);
