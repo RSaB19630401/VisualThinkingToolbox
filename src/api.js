@@ -4,10 +4,11 @@ import { ICON_NAMES } from './icons.jsx';
 import { MOOD_VALS } from './palettes.js';
 import { T } from './translations.js';
 import { vd } from './validate.js';
+import { kiFetch } from './kiFetch.js';
 
 async function apiCall(sys, usr, attempt = 0) {
   const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
-  const res = await fetch(apiUrl, {
+  const res = await kiFetch(apiUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ max_tokens: 2000, system: sys, messages: [{ role: 'user', content: usr }] }),
   });

@@ -57,6 +57,41 @@ async function anthropicFetch(apiKey, payloadBase, env) {
   return { resp, used };
 }
 
+// ── Zugangsprüfung für die KI-Funktionen ──
+// • Secret ACCESS_CODE (Settings → Variables and Secrets): der Zugangscode.
+//   Das Frontend schickt ihn im Header 'X-Access-Code'. Fehlt das Secret, wird alles abgelehnt.
+// • Höchstens 10 KI-Anfragen pro Minute und IP-Adresse (Binding KI_LIMIT, Typ Rate Limit;
+//   bei Pages-Projekten über die Service-Bindung KI_LIMIT_SVC zum Worker 'ki-limiter').
+//   Fehlversuche beim Code zählen mit – das bremst auch das Durchprobieren von Codes.
+async function zugangPruefen(request, env, prefix) {
+  const ip = request.headers.get('cf-connecting-ip') || 'unbekannt';
+  let erlaubt = true;
+  if (env.KI_LIMIT && env.KI_LIMIT.limit) {
+    erlaubt = (await env.KI_LIMIT.limit({ key: ip })).success;
+  } else if (env.KI_LIMIT_SVC) {
+    const r = await env.KI_LIMIT_SVC.fetch('https://ki-limiter/?key=' + encodeURIComponent((prefix || '') + ip));
+    erlaubt = r.status !== 429;
+  }
+  if (!erlaubt) {
+    return { status: 429, error: { type: 'rate_limit', message: 'Zu viele Anfragen – bitte eine Minute warten.' } };
+  }
+  const soll = env.ACCESS_CODE || '';
+  const ist = (request.headers.get('X-Access-Code') || '').trim();
+  if (!soll || !(await gleich(ist, soll))) {
+    return { status: 401, error: { type: 'access_denied', message: 'Zugangscode fehlt oder ist falsch.' } };
+  }
+  return null;
+}
+
+async function gleich(a, b) {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  return crypto.subtle.timingSafeEqual(ha, hb);
+}
+
 export async function onRequest(context) {
   // CORS preflight
   if (context.request.method === 'OPTIONS') {
@@ -64,7 +99,7 @@ export async function onRequest(context) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Access-Code',
         'Access-Control-Expose-Headers': 'X-Model-Used',
       },
     });
@@ -75,6 +110,14 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const verweigert = await zugangPruefen(context.request, context.env, 'vtt:');
+  if (verweigert) {
+    return new Response(JSON.stringify({ error: verweigert.error }), {
+      status: verweigert.status,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
 

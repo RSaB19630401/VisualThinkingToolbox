@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { kiFetch } from "./kiFetch.js";
 
 const FC = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');`;
 const COLORS = ['#E8584F','#3B7DD8','#4CAF50','#F5A623','#7B68AE','#E07BAB','#5A8F7B','#D4A853'];
@@ -100,7 +101,7 @@ export default function MindMapApp({ onBack }) {
     setLoading(true); setErr(null);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
-      const res = await fetch(apiUrl, {
+      const res = await kiFetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ max_tokens: 2000, system: SYSTEM, messages: [{ role: 'user', content: `Mind Map zum Thema: "${topic}"` }] }),
       });

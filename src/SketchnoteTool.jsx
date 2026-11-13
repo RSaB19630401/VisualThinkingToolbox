@@ -6,6 +6,7 @@ import { FONT_CSS as FC, T } from "./translations.js";
 import { PAL, gc, MOOD_VALS, resolvePalette } from "./palettes.js";
 import { StructSVG, JourneySVG, PosterSVG, FlowSVG } from "./Layouts.jsx";
 import { callAPI } from "./api.js";
+import { kiFetch } from "./kiFetch.js";
 import { dlS, dlP, dlJ } from "./downloads.js";
 import { vd } from "./validate.js";
 import { saveLast, loadLast, lastAge } from "./storage.js";
@@ -23,7 +24,7 @@ function ImageLayout({ data, pal, cache }) {
   const generate = React.useCallback(async () => {
     setLoading(true); setErr(null); setImgSrc(null);
     try {
-      const res = await fetch(IMAGE_WORKER_URL, {
+      const res = await kiFetch(IMAGE_WORKER_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: data.title, subtitle: data.subtitle, mood: data.mood,
@@ -99,7 +100,7 @@ function SketchLayout({ data, pal, cache }) {
       ).join('\n');
       const userPrompt = `Sketchnote: "${data.title}"${data.subtitle ? ` (${data.subtitle})` : ''}\n\nSektionen:\n${secText}\n${data.cm ? `\nBotschaft: ${data.cm}` : ''}${data.footer?.title ? `\nFooter: ${data.footer.title}: ${(data.footer.items || []).join(', ')}` : ''}\nStimmung: ${data.mood || 'optimistisch'}`;
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
-      const res = await fetch(apiUrl, {
+      const res = await kiFetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ max_tokens: 12000, system: SVG_SYSTEM, messages: [{ role: 'user', content: userPrompt }] }),
       });

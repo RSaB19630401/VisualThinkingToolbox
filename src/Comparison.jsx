@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { kiFetch } from "./kiFetch.js";
 
 const FC = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');`;
 
@@ -99,7 +100,7 @@ export default function ComparisonApp({ onBack }) {
     setLoading(true); setErr(null);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
-      const res = await fetch(apiUrl, {
+      const res = await kiFetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ max_tokens: 2000, system: SYSTEM, messages: [{ role: 'user', content: `Vergleiche: "${topicA}" vs "${topicB}"` }] }),
       });

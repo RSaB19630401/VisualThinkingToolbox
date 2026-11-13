@@ -1,5 +1,6 @@
 // ValueSquareTool.jsx — Wertequadrat nach Schulz von Thun
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { kiFetch } from './kiFetch.js';
 import { FONT_CSS, mkR, rr, ln, arr } from './primitives.js';
 import { Ic } from './icons.jsx';
 import { PAL, gc } from './palettes.js';
@@ -78,7 +79,7 @@ WICHTIG: Alle Texte in ${tLang}!`;
   const usr = `THEMA: ${topic}\nJSON:`;
 
   const apiUrl = import.meta.env?.VITE_API_URL || '/api/generate';
-  const res = await fetch(apiUrl, {
+  const res = await kiFetch(apiUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       max_tokens: 1200,
