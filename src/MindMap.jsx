@@ -102,7 +102,7 @@ export default function MindMapApp({ onBack }) {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/generate';
       const res = await fetch(apiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, system: SYSTEM, messages: [{ role: 'user', content: `Mind Map zum Thema: "${topic}"` }] }),
+        body: JSON.stringify({ max_tokens: 2000, system: SYSTEM, messages: [{ role: 'user', content: `Mind Map zum Thema: "${topic}"` }] }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();

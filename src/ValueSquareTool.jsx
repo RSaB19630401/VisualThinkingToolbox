@@ -81,7 +81,7 @@ WICHTIG: Alle Texte in ${tLang}!`;
   const res = await fetch(apiUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514', max_tokens: 1200,
+      max_tokens: 1200,
       system: sys, messages: [{ role: 'user', content: usr }],
     }),
   });
